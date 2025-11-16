@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Exam Proctoring</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+
+  <body>
+    <div id="startPage" class="full-center">
+      <button id="startBtn" class="primary-large">Start Test</button>
+    </div>
+
+    <div id="testArea" class="hidden test-layout">
+      <!-- Top Header Bar -->
+      <div class="exam-header">
+        <div class="header-left">
+          <h2 id="examTitle">Exam in Progress</h2>
+          <div class="timer-container">
+            <span class="timer-icon">⏱️</span>
+            <div class="timer-display">
+              <span id="timer">00:00</span>
+              <span class="timer-label">Time Remaining</span>
+            </div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="proctoring-status">
+            <div class="status-indicator" id="proctoringStatus">
+              <span class="status-dot"></span>
+              <span class="status-text">Monitoring Active</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top-right camera with enhanced UI -->
+      <div class="video-wrap">
+        <div class="video-header">
+          <span class="camera-icon">📹</span>
+          <span class="camera-label">Live Proctoring</span>
+          <div class="face-indicator" id="faceIndicator">
+            <span class="indicator-dot"></span>
+            <span>Face Detected</span>
+          </div>
+        </div>
+        <div class="video-feed">
+          <video id="video" autoplay muted playsinline></video>
+          <canvas id="overlay"></canvas>
+        </div>
+        <div class="video-footer">
+          <div class="status-item">
+            <span class="status-icon">👤</span>
+            <span id="faceCount">Faces: 0</span>
+          </div>
+          <div class="status-item">
+            <span class="status-icon">🔊</span>
+            <span id="audioStatus">Audio: Normal</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Proctoring Stats Panel -->
+      <div class="proctoring-stats">
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <div class="stat-value" id="violationCount">0</div>
+            <div class="stat-label">Violations</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📝</div>
+          <div class="stat-info">
+            <div class="stat-value" id="answeredCount">0</div>
+            <div class="stat-label">Answered</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-info">
+            <div class="stat-value" id="progressPercent">0%</div>
+            <div class="stat-label">Progress</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Questions Panel -->
+      <div id="questionPanel" class="question-panel"></div>
+      
+      <div id="statusText" style="display: none"></div>
+      <div id="voiceStatus" style="display: none"></div>
+
+      <!-- Submit Section -->
+      <div class="submit-section">
+        <button id="submitBtn" class="primary-submit">
+          <span class="submit-icon">✓</span>
+          <span>Submit Test</span>
+        </button>
+        <p class="submit-warning">⚠️ Make sure you've answered all questions before submitting</p>
+      </div>
+
+      <!-- Logs Panel (collapsible) -->
+      <div class="log-panel">
+        <div class="log-header" id="logToggle">
+          <h3>
+            <span class="log-icon">📋</span>
+            Recent Events
+            <span class="toggle-icon">▼</span>
+          </h3>
+        </div>
+        <div class="log-content" id="logContent">
+          <pre id="events"></pre>
+        </div>
+      </div>
+
+      <!-- Warning popups (bottom right) -->
+      <div id="warningBox" class="warning-box"></div>
+    </div>
+
+    <div id="completePage" class="hidden full-center">
+      <h2>Test Submitted</h2>
+      <button id="restartBtn" class="secondary">Back to Start</button>
+    </div>
+
+    <script src="/static/script.js"></script>
+  </body>
+</html>
