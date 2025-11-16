@@ -2,3 +2,4 @@
 .DS_Store
 proctoring_log.txt
 users.db
+questions.json
