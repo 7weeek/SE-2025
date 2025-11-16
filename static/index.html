@@ -47,6 +47,21 @@
       <button id="restartBtn" class="secondary">Back to Start</button>
     </div>
 
+
+
+    <!-- Backdrop + Window-change modal -->
+    <div id="windowChangeBackdrop"></div>
+    <div id="windowChangeModal" role="dialog" aria-modal="true" aria-hidden="true">
+      <h3 id="winModalTitle">Window changed</h3>
+      <p id="winModalMessage">Please return to the test. Violation 1 of 3.</p>
+      <div class="modal-actions">
+        <button id="winModalContinue" class="btn-modal primary">Continue Test</button>
+        <button id="winModalExit" class="btn-modal secondary">Exit & Submit</button>
+      </div>
+    </div>
+
+    
+
     <script src="/static/script.js"></script>
   </body>
 </html>

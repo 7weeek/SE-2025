@@ -614,3 +614,66 @@ body {
         bottom: 12px; 
     }
 }
+
+/* Window-change modal */
+#windowChangeModal {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 320px;
+  max-width: 600px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(5,10,30,0.35);
+  z-index: 9999;
+  padding: 20px 22px;
+  display: none;
+  text-align: center;
+  font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+#windowChangeModal h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #0a2342;
+}
+
+#windowChangeModal p {
+  margin: 0 0 14px 0;
+  color: #556575;
+  font-size: 14px;
+}
+
+#windowChangeModal .modal-actions {
+  display:flex;
+  justify-content:center;
+  gap: 12px;
+}
+
+.btn-modal {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-modal.primary {
+  background: linear-gradient(135deg, #0b63c6, #0061b6);
+  color: white;
+}
+
+.btn-modal.secondary {
+  background: #f1f5f9;
+  color: #0a2342;
+}
+
+/* subtle backdrop to focus the modal */
+#windowChangeBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,0.45);
+  z-index: 9998;
+  display: none;
+}

@@ -392,6 +392,171 @@ let voiceStartTs = 0;
 let voiceWarningCount = 0;
 
 
+// ---------------- Window-change / fullscreen enforcement ----------------
+let windowChangeCount = 0;
+const MAX_WINDOW_CHANGES = 3;
+const WINDOW_CHANGE_DEBOUNCE_MS = 900; // ignore duplicate events within this ms
+let lastWindowChangeTs = 0;
+let lastWindowSize = { w: window.innerWidth, h: window.innerHeight };
+let windowChangeModal = null;
+let windowChangeBackdrop = null;
+let winModalMessageEl = null;
+let winModalTitleEl = null;
+let winModalContinueBtn = null;
+let winModalExitBtn = null;
+let firstViolationIgnored = false;
+
+
+
+function initWindowChangeUI() {
+    windowChangeModal = document.getElementById('windowChangeModal');
+    windowChangeBackdrop = document.getElementById('windowChangeBackdrop');
+    winModalMessageEl = document.getElementById('winModalMessage');
+    winModalTitleEl = document.getElementById('winModalTitle');
+    winModalContinueBtn = document.getElementById('winModalContinue');
+    winModalExitBtn = document.getElementById('winModalExit');
+
+    if (winModalContinueBtn) {
+        winModalContinueBtn.addEventListener('click', () => {
+            hideWindowChangeModal();
+            // try to re-request fullscreen (best-effort)
+            tryRequestFullscreen();
+        });
+    }
+    if (winModalExitBtn) {
+        winModalExitBtn.addEventListener('click', () => {
+            hideWindowChangeModal();
+            // submit and exit
+            submitExam(true);
+        });
+    }
+}
+
+function showWindowChangeModal(title, message) {
+    if (!windowChangeModal || !windowChangeBackdrop) return;
+    winModalTitleEl.textContent = title || "Window changed";
+    winModalMessageEl.textContent = message || "";
+    windowChangeBackdrop.style.display = 'block';
+    windowChangeModal.style.display = 'block';
+    windowChangeModal.setAttribute('aria-hidden', 'false');
+    // also log
+    logEvent(`WINDOW_CHANGE: ${message}`);
+}
+
+function hideWindowChangeModal() {
+    if (!windowChangeModal || !windowChangeBackdrop) return;
+    windowChangeBackdrop.style.display = 'none';
+    windowChangeModal.style.display = 'none';
+    windowChangeModal.setAttribute('aria-hidden', 'true');
+}
+
+// perform final action when violation threshold reached
+function handleWindowViolation(reason) {
+    const now = Date.now();
+    if (now - lastWindowChangeTs < WINDOW_CHANGE_DEBOUNCE_MS) return;
+    lastWindowChangeTs = now;
+
+    // If this is the very first violation, mark it ignored and inform user
+    if (!firstViolationIgnored) {
+    firstViolationIgnored = true;
+    logEvent("WINDOW_CHANGE_IGNORED (first occurrence)");
+    return; // absolutely no popup or warning
+    }
+
+    // Normal behavior from second violation onward
+    windowChangeCount += 1;
+    const msg = `${reason}. Violation ${windowChangeCount} of ${MAX_WINDOW_CHANGES}.`;
+    showWindowChangeModal("Attention", msg);
+    pushWarning(msg);
+    logEvent("WINDOW_CHANGE: " + msg);
+
+    if (windowChangeCount >= MAX_WINDOW_CHANGES) {
+        showWindowChangeModal("Test Submitted", "Too many window changes. Submitting the test now.");
+        setTimeout(async () => {
+            try { hideWindowChangeModal(); } catch (e) {}
+            await attemptAutoSubmit();
+        }, 900);
+    } else {
+        // auto-hide after a while so user can resume
+        setTimeout(() => {
+            try { hideWindowChangeModal(); } catch (e) {}
+        }, 6000);
+    }
+}
+
+
+// Try to request fullscreen (best-effort, must be called from user gesture ideally)
+function tryRequestFullscreen() {
+    const docEl = document.documentElement;
+    if (!docEl) return;
+    if (document.fullscreenElement) return; // already
+    const request = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen;
+    if (request) {
+        try {
+            request.call(docEl).catch?.(()=>{/*ignore*/});
+        } catch (e) {
+            try { request.call(docEl); } catch (e) {}
+        }
+    }
+}
+
+// Try to exit fullscreen (best effort)
+function tryExitFullscreen() {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (exit && document.fullscreenElement) {
+        try { exit.call(document).catch?.(()=>{}); } catch (e) { try { exit.call(document); } catch(e){} }
+    }
+}
+
+// Attach listeners to detect tab/window changes
+function attachWindowChangeListeners() {
+    // visibility change (tab switch or minimize)
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            handleWindowViolation('Tab hidden / switched away');
+        }
+    });
+
+    // blur (window lost focus)
+    window.addEventListener('blur', () => {
+        // ignore if the document is being closed/submitted - this is a simple heuristic
+        handleWindowViolation('Window lost focus');
+    });
+
+    // resize (explicit window resize or if user changes monitor)
+    window.addEventListener('resize', () => {
+        // Only count it if size actually changed meaningfully
+        if (Math.abs(window.innerWidth - lastWindowSize.w) > 20 || Math.abs(window.innerHeight - lastWindowSize.h) > 20) {
+            lastWindowSize.w = window.innerWidth;
+            lastWindowSize.h = window.innerHeight;
+            handleWindowViolation('Window resized');
+        }
+    });
+
+    // fullscreen exit (user pressed Esc)
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) {
+            handleWindowViolation('Exited full screen');
+        }
+    });
+}
+
+// Reset counters (call at start)
+function resetWindowChangeCounter() {
+    windowChangeCount = 0;
+    lastWindowChangeTs = 0;
+    lastWindowSize = { w: window.innerWidth, h: window.innerHeight };
+    hideWindowChangeModal();
+}
+
+// initialize UI hooks on load
+document.addEventListener('DOMContentLoaded', () => {
+    initWindowChangeUI();
+    attachWindowChangeListeners();
+});
+
+
+
 // ==========================================================
 // Utility: Friendly warning text
 // ==========================================================
@@ -530,16 +695,60 @@ async function autoSubmitDueToTimer() {
 // ==========================================================
 startBtn.onclick = async () => {
     startPage.classList.add("hidden");
+
+    // Request fullscreen and reset window-change counters
+    tryRequestFullscreen();      // best-effort to go fullscreen
+    resetWindowChangeCounter();  // reset violation counter at start
+
     resetVoiceWarnings();
     await startProctoring();
     await loadQuestions();
     testArea.classList.remove("hidden");
 };
 
+async function localSubmitFallback(reason) {
+    try {
+        logEvent("AUTO_SUBMIT_FALLBACK: " + (reason || "no session"));
+        sending = false;
+        if (sendTimer) clearTimeout(sendTimer);
+        if (audioContext) try { audioContext.close(); } catch(e){}
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+
+        // show UI as submitted (client-side)
+        testArea.classList.add("hidden");
+        completePage.classList.remove("hidden");
+
+        // Optionally store a flag so teacher/system can see it client-side (localStorage)
+        localStorage.setItem('autoSubmitted', JSON.stringify({ reason, ts: Date.now() }));
+    } catch (e) {
+        console.warn("localSubmitFallback error:", e);
+    }
+}
+
+async function attemptAutoSubmit() {
+    // If we have a session + token, attempt server submit
+    if (currentSessionId && token) {
+        try {
+            const ok = await submitExam(true); // we'll modify submitExam to return boolean
+            if (ok === true) return true;
+            // if submitExam returned false, fallthrough to fallback
+        } catch (e) {
+            console.warn("attemptAutoSubmit server submit failed:", e);
+        }
+    }
+
+    // either no session/token, or server-submission failed -> fallback
+    await localSubmitFallback('Server submit failed or no active session');
+    return false;
+}
+
+
+
 // SUBMIT → Collect answers, end session, show completion page
 submitBtn.onclick = () => submitExam(false);
 
 async function submitExam(autoTriggered = false) {
+    tryExitFullscreen();
     if (submitBtn.disabled) return;
 
     if (!currentSessionId || !token) {
