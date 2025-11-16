@@ -1,0 +1,920 @@
+// 
+
+
+
+
+
+
+const MAX_VOICE_WARNINGS = 5;
+// // Updated script based on your last working JS
+// // - Head left/right only after 1 second
+// // - Repeat same violation only after 5 seconds (cooldown)
+// // - Voice sensitivity adjustable via calibrationMultiplier (default less sensitive)
+// // - Voice must be sustained >=1s before warning
+
+// let video = document.getElementById("video");
+// let overlay = document.getElementById("overlay");
+// let events = document.getElementById("events");
+// let warningBox = document.getElementById("warningBox");
+
+// let startPage = document.getElementById("startPage");
+// let testArea = document.getElementById("testArea");
+// let completePage = document.getElementById("completePage");
+
+// let startBtn = document.getElementById("startBtn");
+// let submitBtn = document.getElementById("submitBtn");
+// let restartBtn = document.getElementById("restartBtn");
+
+// let questionPanel = document.getElementById("questionPanel");
+
+// let statusText = document.getElementById("statusText");
+// let faceCountSpan = document.getElementById("faceCount");
+// let voiceStatus = document.getElementById("voiceStatus");
+
+// let stream = null;
+// let canvas = document.createElement("canvas");
+// let ctx = canvas.getContext("2d");
+
+// let audioContext = null;
+// let analyser = null;
+
+// let rms = 0;
+// let voiceActive = false;
+// let voiceThreshold = 0.08;
+
+// let sending = false;
+// let sendTimer = null;
+
+// /* ---------- CONFIGURABLE VALUES ---------- */
+// const HEAD_HOLD_MS = 1000;       // require head-left/right for 1 second
+// const VIOLATION_COOLDOWN_MS = 5000; // repeat same violation only after 5s
+
+// const VOICE_HOLD_MS = 350;      // require voice sustained 1s
+// let calibrationMultiplier = 2.5; // tweak this to make voice more/less sensitive
+// // larger multiplier -> higher threshold -> less sensitive
+// /* ----------------------------------------- */
+
+// // track head hold start and last shown times
+// let currentHeadDir = "Center";    // current instantaneous direction from server
+// let headDirStart = 0;             // when this direction started (ms)
+// let lastShownTime = {};           // map: violationText -> lastShownTimestamp (ms)
+
+// // voice tracking
+// let voiceStartTs = 0;
+
+// /* Friendly warning mapper */
+// function friendly(msg) {
+//     msg = msg.toLowerCase();
+//     if (msg.includes("left")) return "Looking left — keep your head straight";
+//     if (msg.includes("right")) return "Looking right — keep your head straight";
+//     if (msg.includes("no person") || msg.includes("not present")) return "Person not present";
+//     if (msg.includes("multiple")) return "Multiple persons detected";
+//     if (msg.includes("voice") || msg.includes("please remain silent")) return "Please remain silent";
+//     return msg;
+// }
+
+// /* UI helpers */
+// function pushWarning(text) {
+//     // don't spam: check lastShownTime
+//     const now = Date.now();
+//     const last = lastShownTime[text] || 0;
+//     if (now - last < VIOLATION_COOLDOWN_MS) return; // still in cooldown
+
+//     // update last shown
+//     lastShownTime[text] = now;
+
+//     let el = document.createElement("div");
+//     el.className = "warning-item";
+//     el.innerText = text;
+//     warningBox.prepend(el);
+
+//     // auto-remove
+//     setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 9000);
+// }
+
+// function logEvent(text) {
+//     let now = new Date().toLocaleTimeString();
+//     events.textContent = `[${now}] ${text}\n` + events.textContent;
+// }
+
+// /* ---------- Start / Restart / Submit ---------- */
+// startBtn.onclick = async () => {
+//     startPage.classList.add("hidden");
+//     await startProctoring();
+//     await loadQuestions();
+//     testArea.classList.remove("hidden");
+// };
+
+// restartBtn.onclick = () => location.reload();
+
+// submitBtn.onclick = () => {
+//     sending = false;
+//     if (sendTimer) clearTimeout(sendTimer);
+//     if (audioContext) audioContext.close();
+
+//     testArea.classList.add("hidden");
+//     completePage.classList.remove("hidden");
+// };
+
+// /* ---------- Proctor: camera + mic + auto-calibrate ---------- */
+// async function startProctoring() {
+//     stream = await navigator.mediaDevices.getUserMedia({
+//         video: { width: 1280, height: 720 },
+//         audio: true
+//     });
+
+//     const videoOnly = new MediaStream(stream.getVideoTracks());
+//     video.srcObject = videoOnly;
+//     video.muted = true;
+//     await video.play();
+
+//     // audio analyser
+//     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+//     const src = audioContext.createMediaStreamSource(stream);
+//     analyser = audioContext.createAnalyser();
+//     analyser.fftSize = 2048;
+//     src.connect(analyser);
+
+//     // auto audio calibration (4s)
+//     logEvent("Calibrating microphone... stay silent");
+//     let samples = [];
+//     let t0 = performance.now();
+//     while (performance.now() - t0 < 4000) {
+//         let buf = new Float32Array(analyser.fftSize);
+//         analyser.getFloatTimeDomainData(buf);
+
+//         let s = 0;
+//         for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+//         samples.push(Math.sqrt(s / buf.length));
+//         await new Promise(r => setTimeout(r, 140));
+//     }
+//     let avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+
+//     // Apply multiplier (larger -> less sensitive)
+//     voiceThreshold = Math.max(0.01, avg * calibrationMultiplier);
+//     logEvent(`Calibration done. voiceThreshold ≈ ${voiceThreshold.toFixed(4)} (multiplier ${calibrationMultiplier})`);
+
+//     sending = true;
+//     monitorVoice();
+//     scheduleSend();
+//     statusText.innerText = "Status: Active";
+// }
+
+// /* ---------- Questions ---------- */
+// async function loadQuestions() {
+//     try {
+//         let res = await fetch("/questions.json");
+//         let data = await res.json();
+//         renderQuestions(data);
+//     } catch (e) {
+//         questionPanel.innerHTML = "<p>Unable to load questions.</p>";
+//     }
+// }
+
+// function renderQuestions(qs) {
+//     questionPanel.innerHTML = "";
+//     qs.forEach((q, i) => {
+//         let div = document.createElement("div");
+//         div.className = "question-item";
+//         div.innerHTML = `<div><b>${i + 1}. ${q.question}</b></div>`;
+//         q.options.forEach((opt, j) => {
+//             div.innerHTML += `
+//                 <label class="option">
+//                     <input type="radio" name="q${i}" value="${j}">
+//                     ${opt}
+//                 </label>
+//             `;
+//         });
+//         questionPanel.appendChild(div);
+//     });
+// }
+
+// /* ---------- Voice monitoring (debounced) ---------- */
+// function monitorVoice() {
+//     if (!analyser || !sending) return;
+
+//     let buffer = new Float32Array(analyser.fftSize);
+//     analyser.getFloatTimeDomainData(buffer);
+
+//     let s = 0;
+//     for (let i = 0; i < buffer.length; i++) s += buffer[i] * buffer[i];
+//     rms = Math.sqrt(s / buffer.length);
+
+//     const now = Date.now();
+
+//     if (rms > voiceThreshold) {
+//         if (!voiceActive) {
+//             voiceActive = true;
+//             voiceStartTs = now;
+//         } else {
+//             // sustained voice?
+//             if ((now - voiceStartTs) >= VOICE_HOLD_MS) {
+//                 // show voice violation only if cooldown passed
+//                 const vtext = "Please remain silent";
+//                 if (!lastShownTime[vtext] || (now - lastShownTime[vtext] >= VIOLATION_COOLDOWN_MS)) {
+//                     pushWarning(vtext);
+//                     logEvent(vtext);
+//                     lastShownTime[vtext] = now;
+//                 }
+//             }
+//         }
+//     } else {
+//         voiceActive = false;
+//     }
+
+//     setTimeout(monitorVoice, 200);
+// }
+
+// /* ---------- Send frames periodically ---------- */
+// function scheduleSend() {
+//     if (!sending) return;
+//     sendTimer = setTimeout(async () => {
+//         await sendFrame();
+//         scheduleSend();
+//     }, 300);
+// }
+
+// async function sendFrame() {
+//     // guard
+//     if (!video || video.readyState < 2) return;
+
+//     canvas.width = video.videoWidth;
+//     canvas.height = video.videoHeight;
+//     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+//     let data = canvas.toDataURL("image/jpeg", 0.6);
+
+//     try {
+//         let res = await fetch("/analyze_frame", {
+//             method: "POST",
+//             headers: { "Content-Type": "application/json" },
+//             body: JSON.stringify({ image: data })
+//         });
+//         let json = await res.json();
+//         processDetection(json);
+//     } catch (e) {
+//         console.warn("sendFrame error", e);
+//     }
+// }
+
+// /* ---------- Process detection results with head hold logic ---------- */
+// let lastHeadDetected = "Center";
+// let headDetectedStart = 0;
+
+// function processDetection(res) {
+//     let faces = res.faces || [];
+//     faceCountSpan.innerText = "Faces: " + faces.length;
+
+//     const now = Date.now();
+
+//     // presence violations: person not present or multiple persons
+//     if (faces.length === 0) {
+//         const text = "Person not present";
+//         if (!lastShownTime[text] || (now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS)) {
+//             pushWarning(text);
+//             logEvent(text);
+//             lastShownTime[text] = now;
+//         }
+//     } else if (faces.length > 1) {
+//         const text = "Multiple persons detected";
+//         if (!lastShownTime[text] || (now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS)) {
+//             pushWarning(text);
+//             logEvent(text);
+//             lastShownTime[text] = now;
+//         }
+//     }
+
+//     // HEAD DIRECTION: We rely on res.head_pose.direction coming from server (Left/Right/Center)
+//     let detected = "Center";
+//     if (res.head_pose && res.head_pose.direction) detected = res.head_pose.direction;
+
+//     // detect change
+//     if (detected !== lastHeadDetected) {
+//         lastHeadDetected = detected;
+//         headDetectedStart = now;
+//     } else {
+//         // same direction continuing
+//         if ((detected === "Left" || detected === "Right")) {
+//             const held = now - headDetectedStart;
+//             if (held >= HEAD_HOLD_MS) {
+//                 const text = detected === "Left" ? "Looking left" : "Looking right";
+//                 if (!lastShownTime[text] || (now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS)) {
+//                     pushWarning(friendly(text));
+//                     logEvent(friendly(text));
+//                     lastShownTime[text] = now;
+//                 }
+//             }
+//         }
+//     }
+
+//     // draw red boxes only when there's a face-related violation (presence or head held)
+//     const ov = overlay.getContext("2d");
+//     ov.clearRect(0, 0, overlay.width, overlay.height);
+//     overlay.width = canvas.width;
+//     overlay.height = canvas.height;
+
+//     // Determine whether to show boxes:
+//     let showBoxes = false;
+//     if (faces.length === 0 || faces.length > 1) showBoxes = true;
+//     if ((lastHeadDetected === "Left" || lastHeadDetected === "Right") && (Date.now() - headDetectedStart >= HEAD_HOLD_MS)) showBoxes = true;
+
+//     if (showBoxes && faces.length > 0) {
+//         ov.strokeStyle = "red";
+//         ov.lineWidth = 3;
+//         faces.forEach(f => ov.strokeRect(f.x, f.y, f.w, f.h));
+//     }
+
+//     // Redirect back to home page after test is completed
+//     document.getElementById("restartBtn").addEventListener("click", () => {
+//         window.location.href = "/home.html";
+//     });
+
+// }
+
+
+// ==============================
+//  CLEAN + FIXED SCRIPT.JS
+// ==============================
+
+// --- DOM ELEMENTS ---
+let video = document.getElementById("video");
+let overlay = document.getElementById("overlay");
+let events = document.getElementById("events");
+let warningBox = document.getElementById("warningBox");
+
+let startPage = document.getElementById("startPage");
+let testArea = document.getElementById("testArea");
+let completePage = document.getElementById("completePage");
+
+let startBtn = document.getElementById("startBtn");
+let submitBtn = document.getElementById("submitBtn");
+let restartBtn = document.getElementById("restartBtn");
+
+let questionPanel = document.getElementById("questionPanel");
+let timerElement = document.getElementById("timer");
+let examTitleEl = document.getElementById("examTitle");
+let violationCountEl = document.getElementById("violationCount");
+
+let statusText = document.getElementById("statusText");
+let faceCountSpan = document.getElementById("faceCount");
+let voiceStatus = document.getElementById("voiceStatus");
+
+// --- VIDEO/MIC STREAM ---
+let stream = null;
+let canvas = document.createElement("canvas");
+let ctx = canvas.getContext("2d");
+
+// --- AUDIO SETUP ---
+let audioContext = null;
+let analyser = null;
+let rms = 0;
+let voiceActive = false;
+let voiceThreshold = 0.08;
+
+// --- STATE ---
+let sending = false;
+let sendTimer = null;
+let timerInterval = null;
+let timeRemainingSeconds = 0;
+
+// --- CONFIG ---
+const HEAD_HOLD_MS = 1000;
+const VIOLATION_COOLDOWN_MS = 5000;
+const VOICE_HOLD_MS = 350;
+const DEFAULT_EXAM_DURATION_MINUTES = 5;
+let calibrationMultiplier = 2.5;
+
+// --- HEAD + VOICE TRACKERS ---
+let lastShownTime = {};
+let lastHeadDetected = "Center";
+let headDetectedStart = 0;
+let voiceStartTs = 0;
+let voiceWarningCount = 0;
+
+
+// ==========================================================
+// Utility: Friendly warning text
+// ==========================================================
+function friendly(msg) {
+    msg = msg.toLowerCase();
+    if (msg.includes("left")) return "Looking left — keep your head straight";
+    if (msg.includes("right")) return "Looking right — keep your head straight";
+    if (msg.includes("no person")) return "Person not present";
+    if (msg.includes("multiple")) return "Multiple persons detected";
+    if (msg.includes("voice") || msg.includes("silent")) return "Please remain silent";
+    return msg;
+}
+
+// ==========================================================
+// UI HELPERS
+// ==========================================================
+function pushWarning(text) {
+    const now = Date.now();
+    const last = lastShownTime[text] || 0;
+
+    if (now - last < VIOLATION_COOLDOWN_MS) return;
+
+    lastShownTime[text] = now;
+
+    let el = document.createElement("div");
+    el.className = "warning-item";
+    el.innerText = text;
+    warningBox.prepend(el);
+
+    setTimeout(() => {
+        if (el.parentNode) el.parentNode.removeChild(el);
+    }, 9000);
+}
+
+function logEvent(text) {
+    let now = new Date().toLocaleTimeString();
+    events.textContent = `[${now}] ${text}\n` + events.textContent;
+}
+
+function resetVoiceWarnings() {
+    voiceWarningCount = 0;
+    updateViolationDisplay();
+}
+
+function updateViolationDisplay() {
+    if (violationCountEl) {
+        violationCountEl.textContent = voiceWarningCount.toString();
+    }
+}
+
+function incrementVoiceWarnings() {
+    voiceWarningCount += 1;
+    updateViolationDisplay();
+    if (voiceWarningCount > MAX_VOICE_WARNINGS) {
+        alert("Too many voice warnings. The test will be submitted automatically.");
+        submitExam(true);
+    }
+}
+
+// ==========================================================
+// TIMER HELPERS
+// ==========================================================
+function parseDurationMinutes(raw) {
+    if (raw === undefined || raw === null) return null;
+    if (typeof raw === "number") return raw;
+    if (typeof raw === "string") {
+        const trimmed = raw.trim();
+        if (!trimmed) return null;
+        if (trimmed.includes(":")) {
+            const parts = trimmed.split(":").map(part => parseInt(part, 10));
+            if (parts.length === 3 && parts.every(num => !isNaN(num))) {
+                const [hours, minutes, seconds] = parts;
+                return hours * 60 + minutes + Math.floor((seconds || 0) / 60);
+            }
+        }
+        const numeric = parseFloat(trimmed);
+        if (!isNaN(numeric)) return numeric;
+    }
+    return null;
+}
+
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.max(0, seconds % 60);
+    const paddedMins = String(mins).padStart(2, "0");
+    const paddedSecs = String(secs).padStart(2, "0");
+    return `${paddedMins}:${paddedSecs}`;
+}
+
+function updateTimerDisplay(seconds) {
+    if (!timerElement) return;
+    timerElement.textContent = formatTime(Math.max(0, seconds));
+    timerElement.classList.toggle("warning", seconds <= 300 && seconds > 60);
+    timerElement.classList.toggle("danger", seconds <= 60);
+}
+
+function startExamTimer(durationMinutes) {
+    if (!timerElement) return;
+
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
+    if (!durationMinutes || isNaN(durationMinutes) || durationMinutes <= 0) {
+        timerElement.textContent = "--:--";
+        timerElement.classList.remove("warning", "danger");
+        return;
+    }
+
+    timeRemainingSeconds = Math.floor(durationMinutes * 60);
+    updateTimerDisplay(timeRemainingSeconds);
+
+    timerInterval = setInterval(() => {
+        timeRemainingSeconds -= 1;
+        if (timeRemainingSeconds <= 0) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            updateTimerDisplay(0);
+            autoSubmitDueToTimer();
+        } else {
+            updateTimerDisplay(timeRemainingSeconds);
+        }
+    }, 1000);
+}
+
+async function autoSubmitDueToTimer() {
+    if (submitBtn.disabled) return;
+    alert("Time is up. Submitting test automatically.");
+    await submitExam(true);
+}
+
+
+// ==========================================================
+// BUTTON HANDLERS
+// ==========================================================
+startBtn.onclick = async () => {
+    startPage.classList.add("hidden");
+    resetVoiceWarnings();
+    await startProctoring();
+    await loadQuestions();
+    testArea.classList.remove("hidden");
+};
+
+// SUBMIT → Collect answers, end session, show completion page
+submitBtn.onclick = () => submitExam(false);
+
+async function submitExam(autoTriggered = false) {
+    if (submitBtn.disabled) return;
+
+    if (!currentSessionId || !token) {
+        alert("Session not initialized. Please restart the test from home page.");
+        return;
+    }
+
+    sending = false;
+    if (sendTimer) clearTimeout(sendTimer);
+    if (audioContext) audioContext.close();
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+
+    // Collect answers
+    const answers = {};
+    const radioButtons = document.querySelectorAll('input[type="radio"]:checked');
+    radioButtons.forEach(radio => {
+        const questionId = radio.getAttribute('data-question-id');
+        if (questionId) {
+            answers[questionId] = parseInt(radio.value);
+        }
+    });
+
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = autoTriggered ? 'Submitting (Time Up)...' : 'Submitting...';
+
+    try {
+        const res = await fetch('/api/session/end', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                session_id: parseInt(currentSessionId),
+                answers: answers
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            window.location.href = `/report.html?sessionId=${currentSessionId}`;
+        } else {
+            alert('Error submitting test: ' + (data.message || 'Unknown error'));
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
+    } catch (err) {
+        console.error('Error submitting test:', err);
+        alert('Error submitting test. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        return;
+    }
+
+    testArea.classList.add("hidden");
+    completePage.classList.remove("hidden");
+}
+
+// BACK → Home
+restartBtn.addEventListener("click", () => {
+    window.location.href = "/home.html";
+});
+
+
+// ==========================================================
+// START PROCTORING (Camera + Mic + Calibration)
+// ==========================================================
+async function startProctoring() {
+    stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 1280, height: 720 },
+        audio: true
+    });
+
+    const videoOnly = new MediaStream(stream.getVideoTracks());
+    video.srcObject = videoOnly;
+    video.muted = true;
+    await video.play();
+
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const src = audioContext.createMediaStreamSource(stream);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    src.connect(analyser);
+
+    // --- Calibrate mic ---
+    logEvent("Calibrating microphone... stay silent");
+    let samples = [];
+    let t0 = performance.now();
+
+    while (performance.now() - t0 < 4000) {
+        let buf = new Float32Array(analyser.fftSize);
+        analyser.getFloatTimeDomainData(buf);
+
+        let s = 0;
+        for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+        samples.push(Math.sqrt(s / buf.length));
+
+        await new Promise(r => setTimeout(r, 140));
+    }
+
+    let avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+    voiceThreshold = Math.max(0.01, avg * calibrationMultiplier);
+
+    logEvent(`Calibration done. Threshold ≈ ${voiceThreshold.toFixed(4)}`);
+
+    sending = true;
+    monitorVoice();
+    scheduleSend();
+}
+
+
+// ==========================================================
+// LOAD QUESTIONS FROM API
+// ==========================================================
+let currentExamId = null;
+let currentSessionId = null;
+let examQuestions = [];
+let token = null;
+
+async function loadQuestions() {
+    try {
+        // Get exam_id and session_id from URL or localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        currentExamId = urlParams.get('examId') || localStorage.getItem('currentExamId');
+        currentSessionId = urlParams.get('sessionId') || localStorage.getItem('currentSessionId');
+        token = localStorage.getItem('authToken');
+        
+        if (!currentExamId) {
+            questionPanel.innerHTML = "<p>No exam ID provided. Please select an exam from the home page.</p>";
+            return;
+        }
+        
+        if (!token) {
+            questionPanel.innerHTML = "<p>Not authenticated. Please login.</p>";
+            window.location.href = '/login.html';
+            return;
+        }
+        
+        // Fetch questions from API
+        const res = await fetch(`/api/exam/${currentExamId}/questions`, {
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        });
+        
+        if (!res.ok) {
+            questionPanel.innerHTML = "<p>Unable to load questions.</p>";
+            return;
+        }
+        
+        const data = await res.json();
+        examQuestions = data.questions;
+        renderQuestions(data.questions);
+
+        if (examTitleEl && data.exam_title) {
+            examTitleEl.textContent = data.exam_title;
+        }
+
+        startExamTimer(DEFAULT_EXAM_DURATION_MINUTES);
+        
+    } catch (e) {
+        console.error('Error loading questions:', e);
+        questionPanel.innerHTML = "<p>Unable to load questions.</p>";
+    }
+}
+
+function renderQuestions(qs) {
+    questionPanel.innerHTML = "";
+    qs.forEach((q, i) => {
+        let div = document.createElement("div");
+        div.className = "question-item";
+
+        div.innerHTML = `<div><b>${i + 1}. ${q.question}</b></div>`;
+
+        q.options.forEach((opt, j) => {
+            div.innerHTML += `
+                <label class="option">
+                    <input type="radio" name="q${q.question_id}" value="${j}" data-question-id="${q.question_id}">
+                    ${opt}
+                </label>
+            `;
+        });
+
+        questionPanel.appendChild(div);
+    });
+}
+
+
+// ==========================================================
+// VOICE MONITORING
+// ==========================================================
+function monitorVoice() {
+    if (!analyser || !sending) return;
+
+    let buffer = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buffer);
+
+    let s = 0;
+    for (let i = 0; i < buffer.length; i++) s += buffer[i] * buffer[i];
+    rms = Math.sqrt(s / buffer.length);
+
+    const now = Date.now();
+
+    if (rms > voiceThreshold) {
+        if (!voiceActive) {
+            voiceActive = true;
+            voiceStartTs = now;
+            sendVoiceEvent("voice_start");
+        } else {
+            if (now - voiceStartTs >= VOICE_HOLD_MS) {
+                const vtext = "Please remain silent";
+                if (!lastShownTime[vtext] || now - lastShownTime[vtext] >= VIOLATION_COOLDOWN_MS) {
+                    pushWarning(vtext);
+                    logEvent(vtext);
+                    lastShownTime[vtext] = now;
+                    incrementVoiceWarnings();
+
+                    const duration = (now - voiceStartTs) / 1000;
+                    sendVoiceEvent("voice_stop", { duration });
+                }
+            }
+        }
+    } else {
+        if (voiceActive) {
+            // Voice stopped
+            const duration = (now - voiceStartTs) / 1000;
+            sendVoiceEvent("voice_stop", { duration });
+        }
+        voiceActive = false;
+    }
+
+    // Send periodic update
+    if (rms > voiceThreshold) {
+        sendVoiceEvent("periodic");
+    }
+
+    setTimeout(monitorVoice, 200);
+}
+
+function sendVoiceEvent(eventType, extra = {}) {
+    if (!currentSessionId) return;
+    const payload = {
+        session_id: parseInt(currentSessionId),
+        rms: rms,
+        event: eventType,
+        ...extra
+    };
+    fetch("/voice_event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    }).catch(e => console.warn("voice_event error:", e));
+}
+
+
+// ==========================================================
+// SEND VIDEO FRAMES TO BACKEND
+// ==========================================================
+function scheduleSend() {
+    if (!sending) return;
+    sendTimer = setTimeout(async () => {
+        await sendFrame();
+        scheduleSend();
+    }, 300);
+}
+
+async function sendFrame() {
+    if (!video || video.readyState < 2) return;
+    if (!currentSessionId) return; // Don't send if no session
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    let data = canvas.toDataURL("image/jpeg", 0.6);
+
+    try {
+        let res = await fetch("/analyze_frame", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                image: data,
+                session_id: parseInt(currentSessionId)
+            })
+        });
+        let json = await res.json();
+        processDetection(json);
+    } catch (e) {
+        console.warn("sendFrame error", e);
+    }
+}
+
+
+// ==========================================================
+// PROCESS DETECTION RESULTS
+// ==========================================================
+function processDetection(res) {
+    let faces = res.faces || [];
+    faceCountSpan.innerText = "Faces: " + faces.length;
+
+    const now = Date.now();
+
+    // --- PERSON NOT PRESENT ---
+    if (faces.length === 0) {
+        const text = "Person not present";
+        if (!lastShownTime[text] || now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS) {
+            pushWarning(text);
+            logEvent(text);
+            lastShownTime[text] = now;
+        }
+    }
+
+    // --- MULTIPLE PERSONS ---
+    else if (faces.length > 1) {
+        const text = "Multiple persons detected";
+        if (!lastShownTime[text] || now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS) {
+            pushWarning(text);
+            logEvent(text);
+            lastShownTime[text] = now;
+        }
+    }
+
+    // --- HEAD DIRECTION ---
+    let detected = "Center";
+    if (res.head_pose && res.head_pose.direction)
+        detected = res.head_pose.direction;
+
+    if (detected !== lastHeadDetected) {
+        lastHeadDetected = detected;
+        headDetectedStart = now;
+    } else {
+        if ((detected === "Left" || detected === "Right")) {
+            if (now - headDetectedStart >= HEAD_HOLD_MS) {
+                const text = detected === "Left" ? "Looking left" : "Looking right";
+                if (!lastShownTime[text] || now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS) {
+                    pushWarning(friendly(text));
+                    logEvent(friendly(text));
+                    lastShownTime[text] = now;
+                }
+            }
+        }
+    }
+
+    // --- DRAW RED BOXES IF VIOLATION ---
+    const ov = overlay.getContext("2d");
+    overlay.width = canvas.width;
+    overlay.height = canvas.height;
+    ov.clearRect(0, 0, overlay.width, overlay.height);
+
+    let showBoxes = false;
+    if (faces.length === 0 || faces.length > 1) showBoxes = true;
+    if ((lastHeadDetected === "Left" || lastHeadDetected === "Right") &&
+        (now - headDetectedStart >= HEAD_HOLD_MS)) showBoxes = true;
+
+    if (showBoxes && faces.length > 0) {
+        ov.strokeStyle = "red";
+        ov.lineWidth = 3;
+        faces.forEach(f => ov.strokeRect(f.x, f.y, f.w, f.h));
+    }
+}
+
+// Log panel toggle functionality
+const logToggle = document.getElementById('logToggle');
+const logContent = document.getElementById('logContent');
+const logPanel = document.querySelector('.log-panel');
+
+if (logToggle && logContent) {
+    logToggle.addEventListener('click', () => {
+        logPanel.classList.toggle('collapsed');
+        logContent.classList.toggle('collapsed');
+    });
+}
