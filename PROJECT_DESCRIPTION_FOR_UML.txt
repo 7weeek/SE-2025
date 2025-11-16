@@ -1,0 +1,836 @@
+================================================================================
+EXAM PROCTORING SYSTEM - COMPLETE PROJECT DESCRIPTION FOR UML DIAGRAMS
+================================================================================
+
+PROJECT NAME: Online Exam Proctoring System with Face Recognition
+TECHNOLOGY STACK: Flask (Python), SQLite, OpenCV, Face Recognition, JavaScript
+DATE: 2024
+
+================================================================================
+1. SYSTEM OVERVIEW
+================================================================================
+
+The Exam Proctoring System is a web-based application designed to conduct 
+online examinations with real-time proctoring capabilities. The system ensures 
+academic integrity by monitoring students during exams using computer vision 
+and audio analysis.
+
+KEY FEATURES:
+- User Registration and Authentication (JWT-based)
+- Face Recognition for Identity Verification
+- Real-time Video Proctoring
+- Audio Monitoring (Voice Detection)
+- Head Pose Detection
+- Multiple Person Detection
+- Exam Management (30+ domain-specific exams)
+- Question Bank Management
+- Session Management
+- Violation Logging
+- Automated Report Generation
+
+================================================================================
+2. SYSTEM ARCHITECTURE
+================================================================================
+
+ARCHITECTURE TYPE: Client-Server (3-Tier Architecture)
+- Presentation Layer: HTML, CSS, JavaScript (Frontend)
+- Application Layer: Flask (Python Backend)
+- Data Layer: SQLite Database
+
+COMMUNICATION PROTOCOL: HTTP/HTTPS, RESTful API
+
+================================================================================
+3. USER ROLES AND ACTORS
+================================================================================
+
+1. STUDENT/CANDIDATE
+   - Register with photo and personal details
+   - Login to system
+   - Verify identity using face recognition
+   - View available exams
+   - Take exams with real-time proctoring
+   - View exam results and reports
+
+2. STAFF/PROCTOR
+   - Register with staff credentials
+   - Monitor exam sessions
+   - View violation logs
+   - Access reports
+
+3. SYSTEM ADMINISTRATOR
+   - Manage users
+   - Manage exams and questions
+   - Configure proctoring parameters
+   - View system logs
+
+================================================================================
+4. DATABASE SCHEMA (SQLite)
+================================================================================
+
+4.1 USERS TABLE
+   - id (INTEGER PRIMARY KEY)
+   - user_id (TEXT UNIQUE)
+   - full_name (TEXT)
+   - student_id (TEXT)
+   - email (TEXT UNIQUE)
+   - phone (TEXT)
+   - course (TEXT)
+   - role (TEXT) - 'student', 'candidate', 'staff'
+   - password_hash (TEXT)
+   - photo_path (TEXT)
+   - encoding_path (TEXT) - Face encoding file path
+   - notes (TEXT)
+   - created_at (TEXT)
+
+4.2 EXAMS TABLE
+   - exam_id (INTEGER PRIMARY KEY)
+   - exam_title (TEXT)
+   - description (TEXT)
+   - domain (TEXT) - Programming, Data Science, Web Development, etc.
+   - difficulty (TEXT) - Beginner, Intermediate, Advanced
+   - duration (INTEGER) - in minutes
+   - total_questions (INTEGER)
+   - is_active (INTEGER) - 0 or 1
+   - created_at (TEXT)
+
+4.3 EXAM_QUESTIONS TABLE
+   - question_id (INTEGER PRIMARY KEY)
+   - exam_id (INTEGER) - Foreign Key to exams
+   - question (TEXT)
+   - options (TEXT) - JSON array of options
+   - correct_answer (INTEGER) - Index of correct option
+   - question_order (INTEGER)
+
+4.4 SESSIONS TABLE
+   - session_id (INTEGER PRIMARY KEY)
+   - user_id (TEXT) - Foreign Key to users
+   - exam_id (INTEGER) - Foreign Key to exams
+   - start_time (TEXT)
+   - end_time (TEXT)
+   - status (TEXT) - 'active' or 'completed'
+   - created_at (TEXT)
+
+4.5 REPORTS TABLE
+   - report_id (INTEGER PRIMARY KEY)
+   - session_id (INTEGER) - Foreign Key to sessions
+   - user_id (TEXT) - Foreign Key to users
+   - exam_id (INTEGER) - Foreign Key to exams
+   - total_questions (INTEGER)
+   - correct_answers (INTEGER)
+   - marks (REAL)
+   - percentage (REAL)
+   - submitted_at (TEXT)
+
+4.6 VIOLATION_LOGS TABLE
+   - violation_id (INTEGER PRIMARY KEY)
+   - session_id (INTEGER) - Foreign Key to sessions
+   - violation_type (TEXT) - NO_FACE, MULTIPLE_FACES, HEAD_POSE, VOICE_START, VOICE_VIOLATION, etc.
+   - violation_details (TEXT)
+   - timestamp (TEXT)
+   - severity (TEXT) - 'low', 'medium', 'high'
+
+================================================================================
+5. CORE COMPONENTS AND MODULES
+================================================================================
+
+5.1 BACKEND MODULES (app.py / next.py)
+
+A. AUTHENTICATION MODULE
+   - Functions: api_register(), api_login(), api_verify(), api_me()
+   - JWT Token Generation and Validation
+   - Password Hashing (Werkzeug)
+   - Face Encoding Storage and Comparison
+
+B. USER MANAGEMENT MODULE
+   - User Registration with Photo Upload
+   - User Profile Management
+   - Photo Storage and Retrieval
+
+C. EXAM MANAGEMENT MODULE
+   - Exam Listing (api_tests)
+   - Domain-based Filtering
+   - Question Retrieval (get_exam_questions)
+   - Exam Data Population (populate_initial_exams)
+
+D. SESSION MANAGEMENT MODULE
+   - Session Creation (start_session)
+   - Session Ending (end_session)
+   - Session Status Tracking
+
+E. PROCTORING MODULE
+   - Face Detection (detect_faces_stable)
+     * YuNet Face Detector (Primary)
+     * Caffe DNN (Fallback)
+     * Haar Cascade (Final Fallback)
+   - Head Pose Estimation (estimate_head_pose_simple)
+   - Frame Analysis (analyze_frame)
+   - Voice Event Monitoring (voice_event)
+   - Violation Logging (log_violation)
+
+F. REPORTING MODULE
+   - Report Generation (get_report)
+   - Report Download (download_report)
+   - Violation Summary
+   - Score Calculation
+
+G. DATABASE MODULE
+   - Database Initialization (init_db)
+   - Connection Management (get_db_conn)
+   - CRUD Operations
+
+5.2 FRONTEND MODULES
+
+A. LOGIN MODULE (login.html, login.js)
+   - User Authentication Form
+   - JWT Token Storage
+   - Redirect to Home
+
+B. REGISTRATION MODULE (register.html, register.js)
+   - User Registration Form
+   - Photo Capture/Upload
+   - Form Validation
+   - Face Detection Feedback
+
+C. VERIFICATION MODULE (verify.html, verify.js)
+   - Camera Access
+   - Face Capture
+   - Face Matching with Registered Photo
+   - Verification Result Display
+
+D. HOME MODULE (home.html, home.js)
+   - Exam List Display
+   - Domain Filtering
+   - Exam Selection
+   - Navigation to Test
+
+E. EXAM MODULE (index.html, script.js)
+   - Video Stream Display
+   - Real-time Proctoring
+   - Question Display
+   - Answer Selection
+   - Timer Management
+   - Frame Capture and Analysis
+   - Audio Monitoring
+   - Violation Warnings
+   - Test Submission
+
+F. REPORT MODULE (report.html)
+   - Score Display
+   - Violation Summary
+   - Performance Analysis
+   - Report Download
+
+================================================================================
+6. USE CASES
+================================================================================
+
+UC1: REGISTER USER
+   Actor: Student/Candidate
+   Precondition: User not registered
+   Main Flow:
+   1. User accesses registration page
+   2. User fills registration form (name, email, password, etc.)
+   3. User captures/uploads photo
+   4. System validates form data
+   5. System detects face in photo
+   6. System computes face encoding
+   7. System stores user data and encoding
+   8. System returns success message
+   Postcondition: User account created
+
+UC2: LOGIN
+   Actor: Student/Candidate/Staff
+   Precondition: User registered
+   Main Flow:
+   1. User enters email and password
+   2. System validates credentials
+   3. System generates JWT token
+   4. System returns token to client
+   5. Client stores token
+   Postcondition: User authenticated
+
+UC3: VERIFY IDENTITY
+   Actor: Student/Candidate
+   Precondition: User logged in
+   Main Flow:
+   1. User accesses verification page
+   2. System requests camera access
+   3. User positions face in camera
+   4. User captures photo
+   5. System extracts face encoding
+   6. System compares with registered encoding
+   7. System returns match result
+   Postcondition: Identity verified or rejected
+
+UC4: VIEW AVAILABLE EXAMS
+   Actor: Student/Candidate
+   Precondition: User logged in and verified
+   Main Flow:
+   1. User accesses home page
+   2. System fetches available exams from database
+   3. System displays exams with filters
+   4. User can filter by domain
+   Postcondition: Exams displayed
+
+UC5: START EXAM SESSION
+   Actor: Student/Candidate
+   Precondition: User verified, exam selected
+   Main Flow:
+   1. User selects exam
+   2. System creates session record
+   3. System records start time
+   4. System loads exam questions
+   5. System initializes proctoring
+   Postcondition: Exam session active
+
+UC6: TAKE EXAM WITH PROCTORING
+   Actor: Student/Candidate
+   Precondition: Exam session started
+   Main Flow:
+   1. System displays questions
+   2. System starts video stream
+   3. System captures frames periodically
+   4. System analyzes frames for violations
+   5. System monitors audio
+   6. User answers questions
+   7. System logs violations if detected
+   8. System displays warnings
+   Postcondition: Exam in progress
+
+UC7: DETECT PROCTORING VIOLATIONS
+   Actor: System
+   Precondition: Exam session active
+   Main Flow:
+   1. System captures video frame
+   2. System detects faces
+   3. System estimates head pose
+   4. System checks for multiple persons
+   5. System monitors audio levels
+   6. If violation detected, system logs it
+   7. System displays warning to user
+   Postcondition: Violation logged
+
+UC8: SUBMIT EXAM
+   Actor: Student/Candidate
+   Precondition: Exam in progress
+   Main Flow:
+   1. User clicks submit button
+   2. System calculates score
+   3. System ends session
+   4. System creates report
+   5. System displays results
+   Postcondition: Exam completed, report generated
+
+UC9: VIEW REPORT
+   Actor: Student/Candidate/Staff
+   Precondition: Exam completed
+   Main Flow:
+   1. User requests report
+   2. System fetches report data
+   3. System fetches violation logs
+   4. System displays score and violations
+   5. User can download report
+   Postcondition: Report displayed
+
+UC10: MANAGE EXAMS (Future)
+   Actor: Staff/Admin
+   Precondition: Staff logged in
+   Main Flow:
+   1. Staff accesses exam management
+   2. Staff creates/edits exams
+   3. Staff adds questions
+   4. System stores exam data
+   Postcondition: Exam data updated
+
+================================================================================
+7. WORKFLOWS AND PROCESSES
+================================================================================
+
+7.1 REGISTRATION WORKFLOW
+   1. User fills form → 2. Photo capture → 3. Face detection → 
+   4. Encoding computation → 5. Data validation → 6. Database insert → 
+   7. Success response
+
+7.2 LOGIN WORKFLOW
+   1. Credentials input → 2. Database lookup → 3. Password verification → 
+   4. JWT generation → 5. Token return → 6. Client storage
+
+7.3 EXAM TAKING WORKFLOW
+   1. Exam selection → 2. Session creation → 3. Question loading → 
+   4. Proctoring start → 5. Video/Audio monitoring → 6. Answer submission → 
+   7. Score calculation → 8. Report generation
+
+7.4 PROCTORING MONITORING WORKFLOW (Continuous Loop)
+   1. Frame capture → 2. Face detection → 3. Head pose estimation → 
+   4. Multiple person check → 5. Audio level check → 6. Violation detection → 
+   7. Logging → 8. Warning display → (Repeat)
+
+7.5 FACE DETECTION WORKFLOW
+   1. Frame received → 2. Try YuNet → 3. If fails, try Caffe → 
+   4. If fails, try Haar → 5. Return faces/landmarks
+
+================================================================================
+8. TECHNOLOGIES AND DEPENDENCIES
+================================================================================
+
+BACKEND:
+- Flask 2.2.5 (Web Framework)
+- SQLite3 (Database)
+- OpenCV 4.8.1.78 (Computer Vision)
+- NumPy 1.25.2 (Numerical Computing)
+- Pillow 10.0.1 (Image Processing)
+- face_recognition (Face Recognition Library)
+- PyJWT (JWT Token Management)
+- Werkzeug (Password Hashing, Utilities)
+
+FRONTEND:
+- HTML5
+- CSS3
+- JavaScript (ES6+)
+- WebRTC (Camera Access)
+- MediaDevices API (Audio/Video)
+- Fetch API (HTTP Requests)
+
+AI/ML MODELS:
+- YuNet Face Detector (ONNX Model)
+- Caffe DNN Face Detector (Fallback)
+- Haar Cascade Classifier (Final Fallback)
+- face_recognition Library (HOG Model)
+
+================================================================================
+9. API ENDPOINTS
+================================================================================
+
+AUTHENTICATION ENDPOINTS:
+- POST /api/register - User registration
+- POST /api/login - User login
+- POST /api/verify - Face verification
+- GET /api/me - Get current user info
+
+EXAM ENDPOINTS:
+- GET /api/tests - List available exams (with domain filter)
+- GET /api/exam/<exam_id>/questions - Get exam questions
+- POST /api/session/start - Start exam session
+- POST /api/session/end - End exam session and create report
+- GET /api/report/<session_id> - Get exam report
+- GET /api/report/<session_id>/download - Download report as HTML
+
+PROCTORING ENDPOINTS:
+- POST /analyze_frame - Analyze video frame for violations
+- POST /voice_event - Log voice detection events
+- POST /update_params - Update proctoring parameters
+
+STATIC PAGES:
+- GET / - Login page
+- GET /login.html - Login page
+- GET /register.html - Registration page
+- GET /home.html - Exam selection page
+- GET /verify.html - Identity verification page
+- GET /report.html - Report display page
+- GET /start_test - Test interface page
+
+UTILITY:
+- GET /health - Health check
+- GET /questions.json - Legacy questions file
+
+================================================================================
+10. PROCTORING FEATURES DETAIL
+================================================================================
+
+10.1 FACE DETECTION
+    - Primary: YuNet ONNX Model (High accuracy)
+    - Fallback 1: Caffe DNN (Medium accuracy)
+    - Fallback 2: Haar Cascade (Basic detection)
+    - Detects face count, position, landmarks
+    - Minimum face size: 80px (configurable)
+
+10.2 HEAD POSE DETECTION
+    - Uses facial landmarks (eyes, nose)
+    - Calculates head rotation (Left/Right/Center)
+    - Threshold: 0.25 (configurable)
+    - Alert duration: 3.0 seconds (configurable)
+    - Severity levels based on deviation
+
+10.3 MULTIPLE PERSON DETECTION
+    - Counts faces in frame
+    - Threshold: 1 person allowed
+    - Logs violation if > 1 face detected
+    - Severity: High
+
+10.4 VOICE/AUDIO MONITORING
+    - RMS (Root Mean Square) level detection
+    - Threshold: 0.08 (normalized, configurable)
+    - Alert duration: 2.0 seconds (configurable)
+    - Tracks voice start/stop events
+    - Periodic monitoring
+
+10.5 VIOLATION TYPES
+    - NO_FACE: No face detected in frame (High severity)
+    - MULTIPLE_FACES: Multiple persons detected (High severity)
+    - HEAD_POSE: Head turned left/right (Medium severity)
+    - VOICE_START: Voice detected (Low severity)
+    - VOICE_VIOLATION: Sustained voice detected (Medium severity)
+    - VOICE_DETECTED: Voice over threshold (Low severity)
+
+10.6 PROCTORING PARAMETERS (Configurable)
+    - head_pose_threshold: 0.25
+    - head_pose_alert_duration: 3.0 seconds
+    - voice_threshold: 0.08
+    - voice_alert_duration: 2.0 seconds
+    - multiple_persons_threshold: 1
+    - min_face_size: 80 pixels
+    - confidence_threshold: 0.6
+
+================================================================================
+11. SECURITY FEATURES
+================================================================================
+
+- JWT-based Authentication
+- Password Hashing (Werkzeug bcrypt)
+- Secure File Upload Validation
+- Face Encoding Storage (Encrypted pickle files)
+- Session-based Authorization
+- Token Expiration (7 days default)
+- SQL Injection Prevention (Parameterized queries)
+- File Size Limits (4MB for photos)
+- File Type Validation (jpg, jpeg, png only)
+
+================================================================================
+12. FILE STRUCTURE
+================================================================================
+
+PROJECT ROOT/
+├── app.py                    # Main Flask app (Proctoring only)
+├── next.py                   # Complete Flask app (Auth + Proctoring + Exams)
+├── requirements.txt          # Python dependencies
+├── questions.json            # Legacy questions file
+├── proctoring_log.txt        # Proctoring event logs
+├── users.db                  # SQLite database
+│
+├── models/                   # AI/ML Models
+│   └── face_detection_yunet_2023mar.onnx
+│
+├── templates/                # HTML Templates
+│   └── index.html            # Main exam interface
+│
+├── static/                   # Static Files
+│   ├── CSS/                  # Stylesheets
+│   │   ├── home.css
+│   │   ├── login.css
+│   │   ├── register.css
+│   │   └── verify.css
+│   ├── JS/                   # JavaScript Files
+│   │   ├── home.js
+│   │   ├── login.js
+│   │   ├── register.js
+│   │   └── verify.js
+│   ├── home.html             # Exam selection page
+│   ├── login.html            # Login page
+│   ├── register.html         # Registration page
+│   ├── verify.html           # Identity verification page
+│   ├── report.html           # Report display page
+│   ├── index.html            # Alternative test page
+│   ├── script.js             # Main exam proctoring script
+│   ├── styles.css            # Main stylesheet
+│   ├── questions.json        # Questions data
+│   ├── uploads/              # User uploaded photos
+│   ├── encodings/            # Face encoding files (.pkl)
+│   └── users.db              # Database (duplicate)
+│
+├── uploads/                  # User photo uploads
+│   └── [user_id].jpg
+│
+└── encodings/                # Face encodings
+    └── [user_id].pkl
+
+================================================================================
+13. CLASS STRUCTURE (For Class Diagram)
+================================================================================
+
+13.1 FLASK APPLICATION CLASS
+    - app: Flask instance
+    - Methods: route decorators, request handlers
+
+13.2 DATABASE CLASSES (Implicit)
+    - User Model
+      * Attributes: id, user_id, full_name, email, password_hash, etc.
+      * Methods: create, read, update, delete
+    - Exam Model
+      * Attributes: exam_id, exam_title, domain, difficulty, etc.
+      * Methods: create, read, update, delete
+    - Session Model
+      * Attributes: session_id, user_id, exam_id, start_time, status
+      * Methods: create, update, end
+    - Report Model
+      * Attributes: report_id, session_id, marks, percentage
+      * Methods: create, read, generate
+    - ViolationLog Model
+      * Attributes: violation_id, session_id, violation_type, severity
+      * Methods: create, read, filter
+
+13.3 PROCTORING CLASSES (Functional)
+    - FaceDetector
+      * detector_yunet: YuNet detector
+      * net_caffe: Caffe DNN
+      * face_cascade: Haar Cascade
+      * Methods: init_detectors(), detect_faces_stable()
+    - HeadPoseEstimator
+      * Methods: estimate_head_pose_simple()
+    - VoiceMonitor
+      * Methods: voice_event(), analyze_audio()
+    - ViolationLogger
+      * Methods: log_violation()
+
+13.4 AUTHENTICATION CLASSES (Functional)
+    - JWTHandler
+      * Methods: make_jwt(), decode_jwt()
+    - PasswordManager
+      * Methods: generate_password_hash(), check_password_hash()
+    - FaceRecognition
+      * Methods: compute_and_save_encoding(), face matching
+
+================================================================================
+14. SEQUENCE DIAGRAMS SCENARIOS
+================================================================================
+
+14.1 USER REGISTRATION SEQUENCE
+    User → Browser → Register Form → Flask App → Database
+    → Face Detection → Encoding Computation → File Storage → Success
+
+14.2 EXAM TAKING SEQUENCE
+    User → Start Exam → Session Creation → Question Loading → 
+    Proctoring Start → Frame Capture Loop → Violation Detection → 
+    Warning Display → Answer Submission → Score Calculation → Report
+
+14.3 FACE VERIFICATION SEQUENCE
+    User → Capture Photo → Flask App → Face Detection → 
+    Encoding Extraction → Comparison with Stored → Match Result
+
+14.4 PROCTORING MONITORING SEQUENCE
+    Camera → Frame Capture → analyze_frame API → Face Detection → 
+    Head Pose Estimation → Violation Check → Database Logging → 
+    Warning Display → (Repeat)
+
+================================================================================
+15. STATE DIAGRAMS
+================================================================================
+
+15.1 USER STATE MACHINE
+    States: Not Registered → Registered → Logged In → Verified → 
+    Exam Selected → Exam Active → Exam Completed → Report Generated
+
+15.2 SESSION STATE MACHINE
+    States: Not Started → Active → Completed → Report Generated
+
+15.3 EXAM STATE MACHINE
+    States: Not Selected → Selected → Started → In Progress → 
+    Submitted → Graded → Report Available
+
+15.4 PROCTORING STATE MACHINE
+    States: Inactive → Active → Monitoring → Violation Detected → 
+    Warning Displayed → (Continue Monitoring)
+
+================================================================================
+16. COMPONENT DIAGRAM ELEMENTS
+================================================================================
+
+COMPONENTS:
+1. Web Browser (Client)
+2. Flask Application Server
+3. SQLite Database
+4. Face Detection Engine (YuNet/Caffe/Haar)
+5. Face Recognition Engine (face_recognition)
+6. Audio Processing Engine
+7. File Storage System
+8. JWT Authentication Service
+9. Report Generator
+
+INTERFACES:
+- HTTP/REST API
+- Database Connection
+- File System I/O
+- Camera/Media API
+- Audio API
+
+================================================================================
+17. DEPLOYMENT DIAGRAM ELEMENTS
+================================================================================
+
+NODES:
+- Client Machine (Browser, Webcam, Microphone)
+- Web Server (Flask Application)
+- Database Server (SQLite File System)
+- File Storage (Local File System)
+- Model Storage (ONNX, Caffe Models)
+
+ARTIFACTS:
+- Flask Application (app.py/next.py)
+- Database File (users.db)
+- Static Files (HTML, CSS, JS)
+- ML Models (ONNX, Caffe)
+- User Photos (uploads/)
+- Face Encodings (encodings/)
+
+================================================================================
+18. ACTIVITY DIAGRAMS
+================================================================================
+
+18.1 EXAM TAKING ACTIVITY
+    Start → Load Questions → Start Timer → Display Question → 
+    Capture Frame → Analyze Frame → Check Violations → 
+    Display Warning (if any) → User Answers → Next Question → 
+    (Repeat) → Submit → Calculate Score → Generate Report → End
+
+18.2 FACE DETECTION ACTIVITY
+    Start → Receive Frame → Try YuNet → Success? → Yes → Return Faces
+    → No → Try Caffe → Success? → Yes → Return Faces
+    → No → Try Haar → Return Faces → End
+
+18.3 VIOLATION DETECTION ACTIVITY
+    Start → Detect Faces → Count Faces → = 0? → Log NO_FACE
+    → > 1? → Log MULTIPLE_FACES
+    → = 1? → Estimate Head Pose → Check Threshold → 
+    Violation? → Log HEAD_POSE → Check Audio → Over Threshold? → 
+    Log VOICE_VIOLATION → End
+
+================================================================================
+19. EXAM DOMAINS AND CATEGORIES
+================================================================================
+
+The system supports 30 exams across 6 domains:
+
+1. PROGRAMMING DOMAIN (5 exams)
+   - Python Basics, Python Advanced, Java Fundamentals, 
+     JavaScript Essentials, C++ Core Concepts
+
+2. DATA SCIENCE DOMAIN (5 exams)
+   - Data Science Fundamentals, Machine Learning Basics, 
+     Deep Learning, Data Visualization, Big Data Analytics
+
+3. WEB DEVELOPMENT DOMAIN (5 exams)
+   - HTML & CSS Basics, React.js Fundamentals, Node.js & Express, 
+     Full Stack Development, Web Security
+
+4. DATABASE DOMAIN (4 exams)
+   - SQL Fundamentals, Database Design, NoSQL Databases, 
+     Database Administration
+
+5. OPERATING SYSTEMS DOMAIN (3 exams)
+   - Operating Systems Basics, Memory Management, Linux Administration
+
+6. NETWORKING DOMAIN (2 exams)
+   - Computer Networks, Network Security
+
+7. SOFTWARE ENGINEERING DOMAIN (4 exams)
+   - OOP Concepts, Design Patterns, Software Testing, Agile Methodologies
+
+8. CLOUD COMPUTING DOMAIN (2 exams)
+   - Cloud Fundamentals, DevOps & CI/CD
+
+Each exam contains 20-30 multiple-choice questions with varying difficulty 
+levels (Beginner, Intermediate, Advanced).
+
+================================================================================
+20. DATA FLOW
+================================================================================
+
+20.1 REGISTRATION DATA FLOW
+    Form Data + Photo → Flask App → Validation → Face Detection → 
+    Encoding → Database Insert → File Storage → Success Response
+
+20.2 EXAM DATA FLOW
+    User Request → JWT Validation → Database Query → Exam Data → 
+    JSON Response → Frontend Display
+
+20.3 PROCTORING DATA FLOW
+    Video Frame (Base64) → Flask App → Image Decode → Face Detection → 
+    Analysis → Violation Check → Database Log → Response → Frontend Warning
+
+20.4 REPORT DATA FLOW
+    Session End → Answer Collection → Score Calculation → 
+    Report Creation → Database Insert → Report Retrieval → 
+    HTML Generation → Download/Display
+
+================================================================================
+21. ERROR HANDLING AND EDGE CASES
+================================================================================
+
+- Face not detected in registration photo
+- Multiple faces in registration photo
+- Face encoding computation failure
+- Camera access denied
+- No face detected during exam
+- Multiple persons detected
+- Network disconnection during exam
+- Session timeout
+- Invalid JWT token
+- Database connection failure
+- File upload size exceeded
+- Invalid file format
+- Exam not found
+- Session already active
+- Questions not loaded
+
+================================================================================
+22. INTEGRATION POINTS
+================================================================================
+
+- WebRTC API (Camera/Microphone Access)
+- MediaDevices API (Device Enumeration)
+- Canvas API (Image Processing)
+- Fetch API (HTTP Communication)
+- LocalStorage (Token Storage)
+- File System (Photo/Encoding Storage)
+- SQLite Database (Data Persistence)
+- OpenCV Library (Computer Vision)
+- face_recognition Library (Face Matching)
+
+================================================================================
+23. PERFORMANCE CONSIDERATIONS
+================================================================================
+
+- Frame analysis rate: ~1-2 frames per second
+- Face detection latency: <100ms (YuNet), <200ms (Caffe), <300ms (Haar)
+- Database queries optimized with indexes
+- Image compression for storage
+- Base64 encoding for frame transmission
+- Async processing for violation logging
+- Client-side audio processing to reduce server load
+
+================================================================================
+24. FUTURE ENHANCEMENTS (Not Currently Implemented)
+================================================================================
+
+- Eye gaze tracking
+- Screen sharing detection
+- Tab switching detection
+- Mobile device detection
+- Real-time proctor dashboard
+- Automated exam scheduling
+- Email notifications
+- PDF report generation
+- Admin panel for exam management
+- Multi-language support
+- Accessibility features
+
+================================================================================
+END OF DOCUMENT
+================================================================================
+
+This document provides comprehensive information for creating all 9 UML diagrams:
+1. Use Case Diagram
+2. Class Diagram
+3. Sequence Diagram
+4. Activity Diagram
+5. State Diagram
+6. Component Diagram
+7. Deployment Diagram
+8. Package Diagram
+9. Communication/Collaboration Diagram
+
+For each diagram type, refer to the relevant sections above for detailed 
+information about actors, classes, interactions, activities, states, components, 
+and deployment configurations.
+
+================================================================================
+

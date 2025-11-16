@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Exam Portal — Available Tests</title>
+
+    <link rel="stylesheet" href="/static/CSS/home.css" />
+  </head>
+
+  <body>
+    <div class="wrap">
+      <div class="topbar">
+        <h1>Available Tests</h1>
+        <div id="status" class="status">Loading user...</div>
+        <button id="logout" class="btn secondary small">Logout</button>
+      </div>
+
+      <div class="filters-section">
+        <h2>Filter by Domain</h2>
+        <div id="domainFilters" class="domain-filters">
+          <button class="domain-btn active" data-domain="all">All Tests</button>
+          <!-- Domain buttons will be added dynamically -->
+        </div>
+      </div>
+
+      <div id="testCount" class="test-count"></div>
+
+      <div id="testsContainer" class="tests-grid">
+        <!-- Tests will load here dynamically -->
+      </div>
+    </div>
+
+    <script src="/static/JS/home.js" defer></script>
+  </body>
+</html>
