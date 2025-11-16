@@ -11,23 +11,66 @@
   <body>
     <div class="wrap">
       <div class="topbar">
-        <h1>Available Tests</h1>
-        <div id="status" class="status">Loading user...</div>
-        <button id="logout" class="btn secondary small">Logout</button>
+        <div class="topbar-left">
+          <div class="logo-section">
+            <span class="logo-icon">📚</span>
+            <div>
+              <h1>Available Tests</h1>
+              <div id="status" class="status">Loading user...</div>
+            </div>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <button id="logout" class="btn secondary small">
+            <span class="btn-icon">🚪</span>
+            Logout
+          </button>
+        </div>
+      </div>
+
+      <div class="search-section">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="Search exams by title, domain, or description..." 
+            class="search-input"
+          />
+          <button id="clearSearch" class="clear-search" style="display:none">✕</button>
+        </div>
       </div>
 
       <div class="filters-section">
-        <h2>Filter by Domain</h2>
+        <h2>
+          <span class="filter-icon">🏷️</span>
+          Filter by Domain
+        </h2>
         <div id="domainFilters" class="domain-filters">
-          <button class="domain-btn active" data-domain="all">All Tests</button>
+          <button class="domain-btn active" data-domain="all">
+            <span class="btn-icon">📋</span>
+            All Tests
+          </button>
           <!-- Domain buttons will be added dynamically -->
         </div>
       </div>
 
-      <div id="testCount" class="test-count"></div>
+      <div class="stats-bar">
+        <div id="testCount" class="test-count"></div>
+        <div class="view-toggle">
+          <button id="gridView" class="view-btn active" title="Grid View">⊞</button>
+          <button id="listView" class="view-btn" title="List View">☰</button>
+        </div>
+      </div>
 
       <div id="testsContainer" class="tests-grid">
         <!-- Tests will load here dynamically -->
+      </div>
+
+      <div id="emptyState" class="empty-state" style="display:none">
+        <div class="empty-icon">🔍</div>
+        <h3>No exams found</h3>
+        <p>Try adjusting your search or filter criteria</p>
       </div>
     </div>
 

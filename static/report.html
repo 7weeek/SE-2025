@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Exam Report</title>
+    <link rel="stylesheet" href="/static/CSS/home.css" />
+    <style>
+        .report-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(20,40,80,0.08);
+        }
+        .score-display {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        .score-display h1 {
+            font-size: 72px;
+            margin: 10px 0;
+            color: white;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .info-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .strength-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: #d5f4e6;
+            border-left: 4px solid #27ae60;
+            border-radius: 4px;
+            color: #27ae60;
+        }
+        .weakness-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: #fadbd8;
+            border-left: 4px solid #e74c3c;
+            border-radius: 4px;
+            color: #e74c3c;
+        }
+        .violation-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: #fef5e7;
+            border-left: 4px solid #f39c12;
+            border-radius: 4px;
+        }
+        .violation-item.high {
+            border-left-color: #e74c3c;
+            background: #fadbd8;
+        }
+        .violation-item.medium {
+            border-left-color: #f39c12;
+            background: #fef5e7;
+        }
+        .violation-item.low {
+            border-left-color: #3498db;
+            background: #ebf5fb;
+        }
+        .section {
+            margin: 30px 0;
+        }
+        .section h2 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .download-btn {
+            background: #27ae60;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 20px 10px 20px 0;
+        }
+        .download-btn:hover {
+            background: #229954;
+        }
+        .back-btn {
+            background: #95a5a6;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        .back-btn:hover {
+            background: #7f8c8d;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="report-container">
+            <div id="loading" class="loading">Loading report...</div>
+            <div id="reportContent" style="display: none;">
+                <h1>Exam Report</h1>
+                
+                <div class="score-display">
+                    <div style="font-size: 18px; opacity: 0.9;">Score</div>
+                    <h1 id="scorePercentage">0%</h1>
+                    <div style="font-size: 16px; opacity: 0.9;">
+                        <span id="scoreMarks">0</span> / <span id="totalQuestions">0</span> questions
+                    </div>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>Student Name:</strong><br>
+                        <span id="studentName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Exam:</strong><br>
+                        <span id="examTitle">-</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Domain:</strong><br>
+                        <span id="examDomain">-</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Submitted:</strong><br>
+                        <span id="submittedAt">-</span>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Strengths</h2>
+                    <div id="strengthsList"></div>
+                </div>
+
+                <div class="section">
+                    <h2>Weaknesses</h2>
+                    <div id="weaknessesList"></div>
+                </div>
+
+                <div class="section">
+                    <h2>Proctoring Violations (<span id="violationCount">0</span>)</h2>
+                    <div id="violationsList"></div>
+                </div>
+
+                <div style="text-align: center; margin-top: 40px;">
+                    <button class="download-btn" id="downloadBtn">Download Report</button>
+                    <button class="back-btn" id="backBtn">Back to Home</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('sessionId');
+
+        if (!sessionId) {
+            document.getElementById('loading').textContent = 'No session ID provided';
+        } else {
+            loadReport(sessionId);
+        }
+
+        async function loadReport(sessionId) {
+            try {
+                const res = await fetch(`/api/report/${sessionId}`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                if (!res.ok) {
+                    document.getElementById('loading').textContent = 'Error loading report';
+                    return;
+                }
+
+                const data = await res.json();
+                if (data.success) {
+                    displayReport(data.report);
+                }
+            } catch (err) {
+                console.error('Error loading report:', err);
+                document.getElementById('loading').textContent = 'Error loading report';
+            }
+        }
+
+        function displayReport(report) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('reportContent').style.display = 'block';
+
+            document.getElementById('scorePercentage').textContent = report.percentage.toFixed(1) + '%';
+            document.getElementById('scoreMarks').textContent = report.correct_answers;
+            document.getElementById('totalQuestions').textContent = report.total_questions;
+            document.getElementById('examTitle').textContent = report.exam_title;
+            document.getElementById('examDomain').textContent = report.domain;
+            document.getElementById('submittedAt').textContent = new Date(report.submitted_at).toLocaleString();
+            document.getElementById('violationCount').textContent = report.total_violations;
+
+            // Display strengths
+            const strengthsList = document.getElementById('strengthsList');
+            if (report.strengths && report.strengths.length > 0) {
+                strengthsList.innerHTML = report.strengths.map(s => 
+                    `<div class="strength-item">✓ ${s}</div>`
+                ).join('');
+            } else {
+                strengthsList.innerHTML = '<p>No strengths identified.</p>';
+            }
+
+            // Display weaknesses
+            const weaknessesList = document.getElementById('weaknessesList');
+            if (report.weaknesses && report.weaknesses.length > 0) {
+                weaknessesList.innerHTML = report.weaknesses.map(w => 
+                    `<div class="weakness-item">✗ ${w}</div>`
+                ).join('');
+            } else {
+                weaknessesList.innerHTML = '<p>No weaknesses identified.</p>';
+            }
+
+            // Display violations
+            const violationsList = document.getElementById('violationsList');
+            if (report.violations && report.violations.length > 0) {
+                violationsList.innerHTML = report.violations.map(v => {
+                    const severity = v.severity || 'medium';
+                    return `
+                        <div class="violation-item ${severity}">
+                            <strong>${v.violation_type}</strong> - ${v.violation_details}<br>
+                            <small>${new Date(v.timestamp).toLocaleString()} | Severity: ${severity}</small>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                violationsList.innerHTML = '<p style="color: #27ae60;">✓ No violations detected during the exam session.</p>';
+            }
+
+            // Download button
+            document.getElementById('downloadBtn').addEventListener('click', () => {
+                window.open(`/api/report/${sessionId}/download?token=${encodeURIComponent(token)}`, '_blank');
+            });
+
+            // Back button
+            document.getElementById('backBtn').addEventListener('click', () => {
+                localStorage.removeItem('currentSessionId');
+                localStorage.removeItem('currentExamId');
+                window.location.href = '/home.html';
+            });
+        }
+    </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Exam Proctoring</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+
+  <body>
+    <div id="startPage" class="full-center">
+      <button id="startBtn" class="primary-large">Start Test</button>
+    </div>
+
+    <div id="testArea" class="hidden test-layout">
+      <!-- Top-right camera -->
+      <div class="video-wrap">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
+      </div>
+
+      <!-- Status panel -->
+      <div class="status-bar">
+        <span id="faceCount">Faces: 0</span>
+      </div>
+
+      <!-- Questions -->
+      <div id="questionPanel" class="question-panel"></div>
+      <!-- add inside <div id="testArea"> ... -->
+      <div id="statusText" style="display: none"></div>
+      <div id="voiceStatus" style="display: none"></div>
+
+      <button id="submitBtn" class="primary-submit">Submit Test</button>
+
+      <!-- Logs (left bottom) -->
+      <div class="log-panel">
+        <h3>Recent Events</h3>
+        <pre id="events"></pre>
+      </div>
+
+      <!-- Warning popups (bottom right) -->
+      <div id="warningBox" class="warning-box"></div>
+    </div>
+
+    <div id="completePage" class="hidden full-center">
+      <h2>Test Submitted</h2>
+      <button id="restartBtn" class="secondary">Back to Start</button>
+    </div>
+
+    <script src="/static/script.js"></script>
+  </body>
+</html>
