@@ -43,18 +43,17 @@ A web-based online examination platform with real-time AI-powered proctoring cap
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd Camera
+   git clone https://github.com/7weeek/SE-2025
    ```
 
 2. **Install dependencies**
    ```bash
    pip install -r requirements.txt
-   pip install face-recognition PyJWT werkzeug
    ```
 
 3. **Download face detection model** (Optional - system will use fallback if not available)
    - Place `face_detection_yunet_2023mar.onnx` in `models/` directory
+   - Install Dlib (Refer https://github.com/7weeek/Dlib-installer)
 
 4. **Run the application**
    ```bash
