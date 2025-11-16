@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Exam Portal — Login</title>
+
+  <!-- external stylesheet -->
+  <link rel="stylesheet" href="/static/css/login.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="header-section">
+        <div class="logo-icon">📚</div>
+        <h2>Welcome Back</h2>
+        <p class="subtitle">Sign in to continue to your exam portal</p>
+      </div>
+      
+      <form id="loginForm" autocomplete="off">
+        <div class="input-group">
+          <label for="email">
+            <span class="label-icon">✉️</span>
+            Email Address
+          </label>
+          <input id="email" name="email" type="email" required placeholder="you@example.com" />
+          <span class="input-focus-line"></span>
+        </div>
+        
+        <div class="input-group" style="margin-top:20px">
+          <label for="password">
+            <span class="label-icon">🔒</span>
+            Password
+          </label>
+          <div class="password-wrapper">
+            <input id="password" name="password" type="password" required placeholder="Enter your password" />
+            <button type="button" class="toggle-password" id="togglePassword">👁️</button>
+          </div>
+          <span class="input-focus-line"></span>
+        </div>
+
+        <div class="actions">
+          <button type="submit" id="loginBtn" class="btn">
+            <span class="btn-text">Login</span>
+            <span class="btn-loader" style="display:none">
+              <span class="spinner"></span>
+              Logging in...
+            </span>
+          </button>
+          <a href="/register.html" class="btn secondary" style="text-decoration:none">
+            <span class="btn-icon">➕</span>
+            Create Account
+          </a>
+        </div>
+
+        <div id="loginError" class="error" style="display:none">
+          <span class="error-icon">⚠️</span>
+          <span class="error-text"></span>
+        </div>
+
+        <div class="note">
+          <span class="note-icon">💡</span>
+          <span>We recommend using the same device/camera registered for the exam for better verification.</span>
+        </div>
+      </form>
+    </div>
+    
+    <div class="footer-links">
+      <a href="/register.html">Don't have an account? Register</a>
+    </div>
+  </div>
+
+  <!-- external script -->
+  <script src="/static/js/login.js" defer></script>
+</body>
+</html>
+
