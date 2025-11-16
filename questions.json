@@ -1,0 +1,27 @@
+[
+  {
+    "question": "What is the capital of India?",
+    "options": ["Mumbai", "New Delhi", "Kolkata", "Chennai"],
+    "answer": 1
+  },
+  {
+    "question": "Which language is used for Android development?",
+    "options": ["Swift", "Kotlin", "Ruby", "Go"],
+    "answer": 1
+  },
+  {
+    "question": "HTTP stands for?",
+    "options": ["HyperText Transfer Protocol", "High Text Process", "Hyper Time Transfer", "Hyperlink Text Process"],
+    "answer": 0
+  },
+  {
+    "question": "FIFO is used in?",
+    "options": ["Stack", "Queue", "Tree", "Graph"],
+    "answer": 1
+  },
+  {
+    "question": "Who created React?",
+    "options": ["Google", "Facebook", "Microsoft", "Apple"],
+    "answer": 1
+  }
+]
