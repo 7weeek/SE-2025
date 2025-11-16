@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Verify — Exam Portal</title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/static/css/verify.css">
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2>Identity Verification</h2>
+      <p class="message">Please position your face in front of the camera and press <strong>Capture & Verify</strong>.</p>
+
+      <div id="previewBox">
+        <video id="video" autoplay playsinline></video>
+        <img id="captured" class="preview" style="display:none"/>
+      </div>
+
+      <div class="controls">
+        <button id="startCam" class="btn secondary">Start Camera</button>
+        <button id="capture" class="btn" disabled>Capture & Verify</button>
+        <button id="retake" class="btn secondary" disabled>Retake</button>
+        <button id="back" class="btn secondary">Back</button>
+      </div>
+
+      <div id="result" class="message"></div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script src="/static/js/verify.js" defer></script>
+</body>
+</html>
