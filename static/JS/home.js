@@ -49,17 +49,24 @@
 
 
 
-// home.js — dynamic test loading & navigation with domain filtering
+// home.js — dynamic test loading & navigation with domain filtering, search, and view toggle
 
 const statusEl = document.getElementById('status');
 const testsContainer = document.getElementById('testsContainer');
 const domainFiltersEl = document.getElementById('domainFilters');
 const testCountEl = document.getElementById('testCount');
+const searchInput = document.getElementById('searchInput');
+const clearSearch = document.getElementById('clearSearch');
+const emptyState = document.getElementById('emptyState');
+const gridViewBtn = document.getElementById('gridView');
+const listViewBtn = document.getElementById('listView');
 const token = localStorage.getItem('authToken');
 
 let allTests = [];
 let allDomains = [];
 let currentDomain = 'all';
+let currentSearch = '';
+let currentView = 'grid';
 
 // Redirect if user is not authenticated
 if (!token) {
@@ -181,6 +188,13 @@ function filterByDomain(domain) {
     }
   });
 
+  // Clear search when changing domain
+  if (searchInput) {
+    searchInput.value = '';
+    currentSearch = '';
+    if (clearSearch) clearSearch.style.display = 'none';
+  }
+
   // Load tests for selected domain
   if (currentDomain === 'all') {
     loadTests('');
@@ -194,32 +208,75 @@ function filterByDomain(domain) {
 // Render tests to the container
 function renderTests(tests) {
   testsContainer.innerHTML = ""; // clear
+  emptyState.style.display = "none";
 
-  if (tests.length === 0) {
-    testsContainer.innerHTML = "<p style='text-align:center; color:var(--muted); padding:40px;'>No tests found for this domain.</p>";
+  // Apply search filter
+  let filteredTests = tests;
+  if (currentSearch.trim()) {
+    const searchLower = currentSearch.toLowerCase();
+    filteredTests = tests.filter(test => 
+      test.title.toLowerCase().includes(searchLower) ||
+      test.domain.toLowerCase().includes(searchLower) ||
+      (test.description && test.description.toLowerCase().includes(searchLower))
+    );
+  }
+
+  if (filteredTests.length === 0) {
+    testsContainer.style.display = "none";
+    emptyState.style.display = "block";
     return;
   }
 
-  tests.forEach(test => {
+  testsContainer.style.display = "grid";
+  
+  // Apply view class
+  testsContainer.classList.remove('list-view');
+  if (currentView === 'list') {
+    testsContainer.classList.add('list-view');
+  }
+
+  filteredTests.forEach(test => {
     const card = document.createElement("div");
-    card.className = "test-card";
+    card.className = `test-card ${currentView === 'list' ? 'list-view' : ''}`;
 
-    card.innerHTML = `
-      <span class="domain-badge">${test.domain}</span>
-      <span class="difficulty ${test.difficulty.toLowerCase()}">${test.difficulty}</span>
-      <h3>${test.title}</h3>
-      <p>${test.description}</p>
-      <button class="btn start-btn" data-id="${test.id}">Start Test</button>
-    `;
+    const cardContent = currentView === 'list' 
+      ? `
+        <div class="test-content">
+          <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
+            <span class="domain-badge">${test.domain}</span>
+            <span class="difficulty ${test.difficulty.toLowerCase()}">${test.difficulty}</span>
+          </div>
+          <h3>${test.title}</h3>
+          <p>${test.description}</p>
+        </div>
+        <button class="btn start-btn" data-id="${test.id}" style="width:auto; min-width:140px;">
+          <span>🚀</span>
+          Start Test
+        </button>
+      `
+      : `
+        <span class="domain-badge">${test.domain}</span>
+        <span class="difficulty ${test.difficulty.toLowerCase()}">${test.difficulty}</span>
+        <h3>${test.title}</h3>
+        <p>${test.description}</p>
+        <button class="btn start-btn" data-id="${test.id}">
+          <span>🚀</span>
+          Start Test
+        </button>
+      `;
 
+    card.innerHTML = cardContent;
     testsContainer.appendChild(card);
   });
 
-  // Add click handlers
+  // Add click handlers with animation
   document.querySelectorAll(".start-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const testId = btn.getAttribute("data-id");
-      window.location.href = `/verify.html?testId=${testId}`;
+    btn.addEventListener("click", function() {
+      this.style.transform = "scale(0.95)";
+      setTimeout(() => {
+        const testId = this.getAttribute("data-id");
+        window.location.href = `/verify.html?testId=${testId}`;
+      }, 150);
     });
   });
 }
@@ -229,7 +286,97 @@ function updateTestCount(count) {
   const domainText = currentDomain === 'all' 
     ? 'All Tests' 
     : allDomains.find(d => d.toLowerCase() === currentDomain) || currentDomain;
-  testCountEl.textContent = `Showing ${count} test${count !== 1 ? 's' : ''} in ${domainText}`;
+  
+  // Apply search filter to count
+  let filteredCount = count;
+  if (currentSearch.trim() && allTests.length > 0) {
+    const searchLower = currentSearch.toLowerCase();
+    filteredCount = allTests.filter(test => {
+      const matchesDomain = currentDomain === 'all' || test.domain.toLowerCase() === currentDomain;
+      const matchesSearch = test.title.toLowerCase().includes(searchLower) ||
+        test.domain.toLowerCase().includes(searchLower) ||
+        (test.description && test.description.toLowerCase().includes(searchLower));
+      return matchesDomain && matchesSearch;
+    }).length;
+  }
+  
+  testCountEl.textContent = `Showing ${filteredCount} test${filteredCount !== 1 ? 's' : ''}${currentDomain !== 'all' ? ` in ${domainText}` : ''}${currentSearch ? ` matching "${currentSearch}"` : ''}`;
+}
+
+// Search functionality
+if (searchInput) {
+  let searchTimeout;
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    currentSearch = e.target.value;
+    
+    if (currentSearch.trim()) {
+      clearSearch.style.display = 'block';
+    } else {
+      clearSearch.style.display = 'none';
+    }
+    
+    searchTimeout = setTimeout(() => {
+      // Re-render with search filter
+      if (currentDomain === 'all') {
+        renderTests(allTests);
+      } else {
+        const filtered = allTests.filter(t => 
+          t.domain.toLowerCase() === currentDomain
+        );
+        renderTests(filtered);
+      }
+      updateTestCount(allTests.length);
+    }, 300);
+  });
+}
+
+if (clearSearch) {
+  clearSearch.addEventListener('click', () => {
+    searchInput.value = '';
+    currentSearch = '';
+    clearSearch.style.display = 'none';
+    if (currentDomain === 'all') {
+      renderTests(allTests);
+    } else {
+      const filtered = allTests.filter(t => 
+        t.domain.toLowerCase() === currentDomain
+      );
+      renderTests(filtered);
+    }
+    updateTestCount(allTests.length);
+  });
+}
+
+// View toggle
+if (gridViewBtn && listViewBtn) {
+  gridViewBtn.addEventListener('click', () => {
+    currentView = 'grid';
+    gridViewBtn.classList.add('active');
+    listViewBtn.classList.remove('active');
+    if (currentDomain === 'all') {
+      renderTests(allTests);
+    } else {
+      const filtered = allTests.filter(t => 
+        t.domain.toLowerCase() === currentDomain
+      );
+      renderTests(filtered);
+    }
+  });
+  
+  listViewBtn.addEventListener('click', () => {
+    currentView = 'list';
+    listViewBtn.classList.add('active');
+    gridViewBtn.classList.remove('active');
+    if (currentDomain === 'all') {
+      renderTests(allTests);
+    } else {
+      const filtered = allTests.filter(t => 
+        t.domain.toLowerCase() === currentDomain
+      );
+      renderTests(filtered);
+    }
+  });
 }
 
 // Use event delegation for the initial "All Tests" button as well
