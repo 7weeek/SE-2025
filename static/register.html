@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Exam Portal — Register</title>
+
+  <!-- external stylesheet -->
+  <link rel="stylesheet" href="/static/css/register.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Exam Portal — Registration</h1>
+    </header>
+
+    <div class="grid">
+      <!-- Left: form -->
+      <div class="card">
+        <form id="registerForm" autocomplete="off">
+          <div class="field two">
+            <div>
+              <label for="fullName">Full name</label>
+              <input id="fullName" name="fullName" type="text" placeholder="Your full name" required />
+            </div>
+            <div>
+              <label for="studentId">Student / Employee ID</label>
+              <input id="studentId" name="studentId" type="text" placeholder="e.g. S12345" required />
+            </div>
+          </div>
+
+          <div class="field two">
+            <div>
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" placeholder="you@example.com" required />
+            </div>
+            <div>
+              <label for="phone">Phone</label>
+              <input id="phone" name="phone" type="text" placeholder="+91 98765 43210" />
+            </div>
+          </div>
+
+          <div class="field two">
+            <div>
+              <label for="course">Course / Department</label>
+              <input id="course" name="course" type="text" placeholder="Computer Science" />
+            </div>
+            <div>
+              <label for="role">Role</label>
+              <select id="role" name="role" required>
+                <option value="">Select role</option>
+                <option value="student">Student</option>
+                <option value="candidate">Candidate</option>
+                <option value="staff">Staff / Proctor</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field two">
+            <div>
+              <label for="password">Password</label>
+              <input id="password" name="password" type="password" minlength="8" placeholder="Min 8 characters" required />
+            </div>
+            <div>
+              <label for="confirmPassword">Confirm Password</label>
+              <input id="confirmPassword" name="confirmPassword" type="password" minlength="8" placeholder="Confirm" required />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="notes">Notes (optional)</label>
+            <input id="notes" name="notes" type="text" placeholder="Any medical / accessibility notes" />
+          </div>
+
+          <div class="field">
+            <div class="note">Photo for identity verification & monitoring during the tests — captured now or upload one. (Required)</div>
+            <div id="photoError" class="error" style="display:none"></div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;margin-top:12px;">
+            <button type="submit" id="submitBtn" class="btn">Register</button>
+            <button type="button" id="clearBtn" class="btn secondary">Clear</button>
+            <div style="margin-left:auto"><a href="/login.html" class="btn ghost" style="text-decoration:none">Go to Login</a></div>
+          </div>
+        </form>
+        <small class="hint">Data will be sent as <code>multipart/form-data</code> (photo included). See integration notes below.</small>
+      </div>
+
+      <!-- Right: photo capture/upload -->
+      <aside class="card photo-area">
+        <div style="width:100%">
+          <label style="display:block;font-size:13px;color:var(--muted);margin-bottom:8px">Photo capture / upload</label>
+          <div id="previewContainer">
+            <video id="previewVideo" autoplay playsinline style="display:none;border-radius:8px;background:#000"></video>
+            <img id="previewImg" class="preview" alt="captured preview" style="display:none" />
+            <div id="placeholder" style="padding:28px;border-radius:8px;border:1px dashed #e6edf3;text-align:center;color:var(--muted)">
+              Photo preview will appear here
+            </div>
+          </div>
+        </div>
+
+        <div class="photo-actions" style="width:100%">
+          <button id="startCam" class="btn secondary">Start Camera</button>
+          <button id="captureBtn" class="btn" disabled>Capture</button>
+          <button id="retakeBtn" class="btn secondary" disabled>Retake</button>
+          <label class="btn ghost" style="padding:8px 10px;display:inline-block">
+            Upload Photo
+            <input id="fileInput" accept="image/*" type="file" style="display:none" />
+          </label>
+        </div>
+
+        <small class="note">Recommended: front camera, clear face view, neutral background. Max file size: 4 MB. Accepted: jpg/jpeg/png.</small>
+      </aside>
+    </div>
+
+    <div style="max-width:980px;margin:18px auto">
+      <div class="card" style="padding:12px">
+        <strong>Integration notes (backend)</strong>
+        <ul>
+          <li>POST <code>/api/register</code> with Content-Type <code>multipart/form-data</code>.</li>
+          <li>Form field names (expected):
+            <ul>
+              <li><code>fullName</code> (string)</li>
+              <li><code>studentId</code> (string)</li>
+              <li><code>email</code> (string)</li>
+              <li><code>phone</code> (string)</li>
+              <li><code>course</code> (string)</li>
+              <li><code>role</code> (string)</li>
+              <li><code>password</code> (string)</li>
+              <li><code>notes</code> (string)</li>
+              <li><code>photo</code> (file) — captured image (jpeg/png). This is the column you requested for monitoring integration.</li>
+            </ul>
+          </li>
+          <li>Server should store photo with association to user record and compute/keep hash / biometric template as needed.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- external JS -->
+  <script src="/static/js/register.js" defer></script>
+</body>
+</html>
