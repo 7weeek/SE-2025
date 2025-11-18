@@ -8,8 +8,33 @@
   </head>
 
   <body>
-    <div id="startPage" class="full-center">
-      <button id="startBtn" class="primary-large">Start Test</button>
+    <div id="startPage" class="full-center start-intro">
+      <div class="instructions-card">
+        <div class="instructions-header">
+          <div class="icon-badge">📘</div>
+          <div>
+            <h2>Exam Instructions</h2>
+            <p>Applies to every test session</p>
+          </div>
+        </div>
+        <ul class="instructions-list">
+          <li>Use a quiet, well-lit room and keep your face within camera view.</li>
+          <li>Ensure a stable internet connection, charged device, and plugged-in power.</li>
+          <li>Disable notifications and close all other tabs or applications.</li>
+          <li>Keep your ID card handy for verification. External materials are not allowed.</li>
+          <li>Audio and video monitoring stay active throughout the exam.</li>
+        </ul>
+        <div class="instructions-footnote">
+          <span>⚠️ Leaving the window or speaking loudly may trigger violations.</span>
+        </div>
+      </div>
+
+      <div class="start-actions">
+        <h3>Ready to begin?</h3>
+        <p>You will enter secure proctoring mode. Camera and microphone access are required.</p>
+        <button id="startBtn" class="primary-large">Start Test</button>
+        <small class="start-note">By continuing you confirm you have read all instructions.</small>
+      </div>
     </div>
 
     <div id="testArea" class="hidden test-layout">
