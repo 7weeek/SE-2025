@@ -354,6 +354,8 @@ let questionPanel = document.getElementById("questionPanel");
 let timerElement = document.getElementById("timer");
 let examTitleEl = document.getElementById("examTitle");
 let violationCountEl = document.getElementById("violationCount");
+let answeredCountEl = document.getElementById("answeredCount");
+let progressPercentEl = document.getElementById("progressPercent");
 
 let statusText = document.getElementById("statusText");
 let faceCountSpan = document.getElementById("faceCount");
@@ -390,6 +392,7 @@ let lastHeadDetected = "Center";
 let headDetectedStart = 0;
 let voiceStartTs = 0;
 let voiceWarningCount = 0;
+let answeredQuestionIds = new Set();
 
 
 // ---------------- Window-change / fullscreen enforcement ----------------
@@ -605,6 +608,28 @@ function updateViolationDisplay() {
     if (violationCountEl) {
         violationCountEl.textContent = voiceWarningCount.toString();
     }
+}
+
+function updateQuestionStats() {
+    const totalQuestions = examQuestions.length;
+    const answered = Math.min(answeredQuestionIds.size, totalQuestions);
+
+    if (answeredCountEl) {
+        answeredCountEl.textContent = answered.toString();
+    }
+
+    if (progressPercentEl) {
+        const percent = totalQuestions > 0 ? Math.round((answered / totalQuestions) * 100) : 0;
+        progressPercentEl.textContent = `${percent}%`;
+    }
+}
+
+function handleAnswerSelection(inputEl) {
+    if (!inputEl) return;
+    const questionId = inputEl.getAttribute("data-question-id");
+    if (!questionId) return;
+    answeredQuestionIds.add(questionId);
+    updateQuestionStats();
 }
 
 function incrementVoiceWarnings() {
@@ -906,8 +931,10 @@ async function loadQuestions() {
         }
         
         const data = await res.json();
-        examQuestions = data.questions;
-        renderQuestions(data.questions);
+        examQuestions = data.questions || [];
+        answeredQuestionIds.clear();
+        updateQuestionStats();
+        renderQuestions(examQuestions);
 
         if (examTitleEl && data.exam_title) {
             examTitleEl.textContent = data.exam_title;
@@ -924,28 +951,41 @@ async function loadQuestions() {
 function renderQuestions(qs) {
     questionPanel.innerHTML = "";
     qs.forEach((q, i) => {
-        let div = document.createElement("div");
-        div.className = "question-item";
+        const wrapper = document.createElement("div");
+        wrapper.className = "question-item";
 
-        div.innerHTML = `<div><b>${i + 1}. ${q.question}</b></div>`;
+        const prompt = document.createElement("div");
+        prompt.innerHTML = `<b>${i + 1}. ${q.question}</b>`;
+        wrapper.appendChild(prompt);
 
         q.options.forEach((opt, j) => {
-            div.innerHTML += `
-                <label class="option">
-                    <input type="radio" name="q${q.question_id}" value="${j}" data-question-id="${q.question_id}">
-                    ${opt}
-                </label>
-            `;
+            const label = document.createElement("label");
+            label.className = "option";
+
+            const input = document.createElement("input");
+            input.type = "radio";
+            input.name = `q${q.question_id}`;
+            input.value = j;
+            input.setAttribute("data-question-id", q.question_id);
+            
+            if (q.selected_option !== undefined && q.selected_option === j) {
+                input.checked = true;
+                answeredQuestionIds.add(String(q.question_id));
+            }
+
+            input.addEventListener("change", () => handleAnswerSelection(input));
+
+            label.appendChild(input);
+            label.append(` ${opt}`);
+            wrapper.appendChild(label);
         });
 
-        questionPanel.appendChild(div);
+        questionPanel.appendChild(wrapper);
     });
+
+    updateQuestionStats();
 }
 
-
-// ==========================================================
-// VOICE MONITORING
-// ==========================================================
 function monitorVoice() {
     if (!analyser || !sending) return;
 

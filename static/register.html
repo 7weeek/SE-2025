@@ -83,7 +83,7 @@
             <div style="margin-left:auto"><a href="/login.html" class="btn ghost" style="text-decoration:none">Go to Login</a></div>
           </div>
         </form>
-        <small class="hint">Data will be sent as <code>multipart/form-data</code> (photo included). See integration notes below.</small>
+        <small class="hint">Data will be sent as <code>multipart/form-data</code> (photo included).</small>
       </div>
 
       <!-- Right: photo capture/upload -->
@@ -111,29 +111,6 @@
 
         <small class="note">Recommended: front camera, clear face view, neutral background. Max file size: 4 MB. Accepted: jpg/jpeg/png.</small>
       </aside>
-    </div>
-
-    <div style="max-width:980px;margin:18px auto">
-      <div class="card" style="padding:12px">
-        <strong>Integration notes (backend)</strong>
-        <ul>
-          <li>POST <code>/api/register</code> with Content-Type <code>multipart/form-data</code>.</li>
-          <li>Form field names (expected):
-            <ul>
-              <li><code>fullName</code> (string)</li>
-              <li><code>studentId</code> (string)</li>
-              <li><code>email</code> (string)</li>
-              <li><code>phone</code> (string)</li>
-              <li><code>course</code> (string)</li>
-              <li><code>role</code> (string)</li>
-              <li><code>password</code> (string)</li>
-              <li><code>notes</code> (string)</li>
-              <li><code>photo</code> (file) — captured image (jpeg/png). This is the column you requested for monitoring integration.</li>
-            </ul>
-          </li>
-          <li>Server should store photo with association to user record and compute/keep hash / biometric template as needed.</li>
-        </ul>
-      </div>
     </div>
   </div>
 
