@@ -18,6 +18,7 @@ A web-based online examination platform with real-time AI-powered proctoring cap
 ## 🛠️ Technology Stack
 
 **Backend:**
+
 - Flask 2.2.5 (Python Web Framework)
 - SQLite (Database)
 - OpenCV (Computer Vision)
@@ -25,10 +26,12 @@ A web-based online examination platform with real-time AI-powered proctoring cap
 - PyJWT (Authentication)
 
 **Frontend:**
+
 - HTML5, CSS3, JavaScript
 - WebRTC (Camera/Microphone Access)
 
 **AI Models:**
+
 - YuNet Face Detector (ONNX)
 - Caffe DNN (Fallback)
 - Haar Cascade (Final Fallback)
@@ -42,20 +45,24 @@ A web-based online examination platform with real-time AI-powered proctoring cap
 ## 🚀 Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/7weeek/SE-2025
    ```
 
 2. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
 
 3. **Download face detection model** (Optional - system will use fallback if not available)
+
    - Place `face_detection_yunet_2023mar.onnx` in `models/` directory
    - Install Dlib (Refer https://github.com/7weeek/Dlib-installer)
 
 4. **Run the application**
+
    ```bash
    python next.py
    ```
@@ -81,7 +88,7 @@ A web-based online examination platform with real-time AI-powered proctoring cap
 - Access detailed reports
 - Manage exam configurations
 
-## 🗂️ Project Structure
+<!-- ## 🗂️ Project Structure
 
 ```
 Camera/
@@ -96,8 +103,9 @@ Camera/
 │   ├── JS/               # JavaScript files
 │   └── uploads/          # User photos
 ├── uploads/              # Photo storage
-└── encodings/            # Face encoding files
-```
+└── encodings/            # Face encoding files -->
+
+````
 
 ## 🔌 Key API Endpoints
 
@@ -155,7 +163,7 @@ Set environment variables for production:
 ```bash
 export JWT_SECRET="your-secret-key"
 export JWT_EXP_DAYS=7
-```
+````
 
 ## 📝 Notes
 
@@ -164,9 +172,9 @@ export JWT_EXP_DAYS=7
 - Ensure good lighting and clear face visibility
 - System requires camera and microphone permissions
 
-## 🤝 Contributing
+<!-- ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to submit a Pull Request. -->
 
 ## 📄 License
 
@@ -175,4 +183,3 @@ This project is for educational purposes.
 ---
 
 **Note:** This system is designed for academic use. Ensure compliance with privacy regulations in your region before deployment.
-
