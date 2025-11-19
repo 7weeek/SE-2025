@@ -231,7 +231,7 @@ const MAX_VOICE_WARNINGS = 5;
 //     sendTimer = setTimeout(async () => {
 //         await sendFrame();
 //         scheduleSend();
-//     }, 300);
+//     }, 1000);
 // }
 
 // async function sendFrame() {
@@ -242,15 +242,15 @@ const MAX_VOICE_WARNINGS = 5;
 //     canvas.height = video.videoHeight;
 //     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-//     let data = canvas.toDataURL("image/jpeg", 0.6);
+//     const data = canvas.toDataURL("image/jpeg", 0.5);
 
 //     try {
-//         let res = await fetch("/analyze_frame", {
+//         const res = await fetch("/analyze_frame", {
 //             method: "POST",
 //             headers: { "Content-Type": "application/json" },
 //             body: JSON.stringify({ image: data })
 //         });
-//         let json = await res.json();
+//         const json = await res.json();
 //         processDetection(json);
 //     } catch (e) {
 //         console.warn("sendFrame error", e);
@@ -260,60 +260,49 @@ const MAX_VOICE_WARNINGS = 5;
 // /* ---------- Process detection results with head hold logic ---------- */
 // let lastHeadDetected = "Center";
 // let headDetectedStart = 0;
+// let phoneViolationCount = 0;
 
 // function processDetection(res) {
-//     let faces = res.faces || [];
-//     faceCountSpan.innerText = "Faces: " + faces.length;
+//     const faces = res.faces || [];
+//     if (faceCountSpan) {
+//         faceCountSpan.innerText = "Faces: " + faces.length;
+//     }
 
 //     const now = Date.now();
 
-//     // presence violations: person not present or multiple persons
 //     if (faces.length === 0) {
-//         const text = "Person not present";
-//         if (!lastShownTime[text] || (now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS)) {
-//             pushWarning(text);
-//             logEvent(text);
-//             lastShownTime[text] = now;
-//         }
+//         reportViolation("Person not present");
 //     } else if (faces.length > 1) {
-//         const text = "Multiple persons detected";
-//         if (!lastShownTime[text] || (now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS)) {
-//             pushWarning(text);
-//             logEvent(text);
-//             lastShownTime[text] = now;
-//         }
+//         reportViolation("Multiple persons detected");
 //     }
 
-//     // HEAD DIRECTION: We rely on res.head_pose.direction coming from server (Left/Right/Center)
 //     let detected = "Center";
 //     if (res.head_pose && res.head_pose.direction) detected = res.head_pose.direction;
 
-//     // detect change
 //     if (detected !== lastHeadDetected) {
 //         lastHeadDetected = detected;
 //         headDetectedStart = now;
-//     } else {
-//         // same direction continuing
-//         if ((detected === "Left" || detected === "Right")) {
-//             const held = now - headDetectedStart;
-//             if (held >= HEAD_HOLD_MS) {
-//                 const text = detected === "Left" ? "Looking left" : "Looking right";
-//                 if (!lastShownTime[text] || (now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS)) {
-//                     pushWarning(friendly(text));
-//                     logEvent(friendly(text));
-//                     lastShownTime[text] = now;
-//                 }
-//             }
+//     } else if (detected === "Left" || detected === "Right") {
+//         const held = now - headDetectedStart;
+//         if (held >= HEAD_HOLD_MS) {
+//             reportViolation(detected === "Left" ? "Looking left" : "Looking right");
 //         }
 //     }
 
-//     // draw red boxes only when there's a face-related violation (presence or head held)
+//     if (res.suspected_phone) {
+//         phoneViolationCount += 1;
+//         reportViolation("Possible phone detected. Remove external devices.");
+//         if (phoneViolationCount >= 3) {
+//             alert("Repeated phone/external device detection. Test will be submitted.");
+//             submitExam(true);
+//         }
+//     }
+
 //     const ov = overlay.getContext("2d");
 //     ov.clearRect(0, 0, overlay.width, overlay.height);
 //     overlay.width = canvas.width;
 //     overlay.height = canvas.height;
 
-//     // Determine whether to show boxes:
 //     let showBoxes = false;
 //     if (faces.length === 0 || faces.length > 1) showBoxes = true;
 //     if ((lastHeadDetected === "Left" || lastHeadDetected === "Right") && (Date.now() - headDetectedStart >= HEAD_HOLD_MS)) showBoxes = true;
@@ -323,12 +312,16 @@ const MAX_VOICE_WARNINGS = 5;
 //         ov.lineWidth = 3;
 //         faces.forEach(f => ov.strokeRect(f.x, f.y, f.w, f.h));
 //     }
+// }
 
-//     // Redirect back to home page after test is completed
-//     document.getElementById("restartBtn").addEventListener("click", () => {
-//         window.location.href = "/home.html";
-//     });
-
+// function reportViolation(message) {
+//     const text = friendly(message);
+//     const now = Date.now();
+//     if (!lastShownTime[text] || now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS) {
+//         pushWarning(text);
+//         logEvent(text);
+//         lastShownTime[text] = now;
+//     }
 // }
 
 
