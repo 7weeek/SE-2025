@@ -6,7 +6,323 @@
 
 
 const MAX_VOICE_WARNINGS = 5;
+// // Updated script based on your last working JS
+// // - Head left/right only after 1 second
+// // - Repeat same violation only after 5 seconds (cooldown)
+// // - Voice sensitivity adjustable via calibrationMultiplier (default less sensitive)
+// // - Voice must be sustained >=1s before warning
 
+// let video = document.getElementById("video");
+// let overlay = document.getElementById("overlay");
+// let events = document.getElementById("events");
+// let warningBox = document.getElementById("warningBox");
+
+// let startPage = document.getElementById("startPage");
+// let testArea = document.getElementById("testArea");
+// let completePage = document.getElementById("completePage");
+
+// let startBtn = document.getElementById("startBtn");
+// let submitBtn = document.getElementById("submitBtn");
+// let restartBtn = document.getElementById("restartBtn");
+
+// let questionPanel = document.getElementById("questionPanel");
+
+// let statusText = document.getElementById("statusText");
+// let faceCountSpan = document.getElementById("faceCount");
+// let voiceStatus = document.getElementById("voiceStatus");
+
+// let stream = null;
+// let canvas = document.createElement("canvas");
+// let ctx = canvas.getContext("2d");
+
+// let audioContext = null;
+// let analyser = null;
+
+// let rms = 0;
+// let voiceActive = false;
+// let voiceThreshold = 0.08;
+
+// let sending = false;
+// let sendTimer = null;
+
+// /* ---------- CONFIGURABLE VALUES ---------- */
+// const HEAD_HOLD_MS = 1000;       // require head-left/right for 1 second
+// const VIOLATION_COOLDOWN_MS = 5000; // repeat same violation only after 5s
+
+// const VOICE_HOLD_MS = 350;      // require voice sustained 1s
+// let calibrationMultiplier = 2.5; // tweak this to make voice more/less sensitive
+// // larger multiplier -> higher threshold -> less sensitive
+// /* ----------------------------------------- */
+
+// // track head hold start and last shown times
+// let currentHeadDir = "Center";    // current instantaneous direction from server
+// let headDirStart = 0;             // when this direction started (ms)
+// let lastShownTime = {};           // map: violationText -> lastShownTimestamp (ms)
+
+// // voice tracking
+// let voiceStartTs = 0;
+
+// /* Friendly warning mapper */
+// function friendly(msg) {
+//     msg = msg.toLowerCase();
+//     if (msg.includes("left")) return "Looking left — keep your head straight";
+//     if (msg.includes("right")) return "Looking right — keep your head straight";
+//     if (msg.includes("no person") || msg.includes("not present")) return "Person not present";
+//     if (msg.includes("multiple")) return "Multiple persons detected";
+//     if (msg.includes("voice") || msg.includes("please remain silent")) return "Please remain silent";
+//     return msg;
+// }
+
+// /* UI helpers */
+// function pushWarning(text) {
+//     // don't spam: check lastShownTime
+//     const now = Date.now();
+//     const last = lastShownTime[text] || 0;
+//     if (now - last < VIOLATION_COOLDOWN_MS) return; // still in cooldown
+
+//     // update last shown
+//     lastShownTime[text] = now;
+
+//     let el = document.createElement("div");
+//     el.className = "warning-item";
+//     el.innerText = text;
+//     warningBox.prepend(el);
+
+//     // auto-remove
+//     setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 9000);
+// }
+
+// function logEvent(text) {
+//     let now = new Date().toLocaleTimeString();
+//     events.textContent = `[${now}] ${text}\n` + events.textContent;
+// }
+
+// /* ---------- Start / Restart / Submit ---------- */
+// startBtn.onclick = async () => {
+//     startPage.classList.add("hidden");
+//     await startProctoring();
+//     await loadQuestions();
+//     testArea.classList.remove("hidden");
+// };
+
+// restartBtn.onclick = () => location.reload();
+
+// submitBtn.onclick = () => {
+//     sending = false;
+//     if (sendTimer) clearTimeout(sendTimer);
+//     if (audioContext) audioContext.close();
+
+//     testArea.classList.add("hidden");
+//     completePage.classList.remove("hidden");
+// };
+
+// /* ---------- Proctor: camera + mic + auto-calibrate ---------- */
+// async function startProctoring() {
+//     stream = await navigator.mediaDevices.getUserMedia({
+//         video: { width: 1280, height: 720 },
+//         audio: true
+//     });
+
+//     const videoOnly = new MediaStream(stream.getVideoTracks());
+//     video.srcObject = videoOnly;
+//     video.muted = true;
+//     await video.play();
+
+//     // audio analyser
+//     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+//     const src = audioContext.createMediaStreamSource(stream);
+//     analyser = audioContext.createAnalyser();
+//     analyser.fftSize = 2048;
+//     src.connect(analyser);
+
+//     // auto audio calibration (4s)
+//     logEvent("Calibrating microphone... stay silent");
+//     let samples = [];
+//     let t0 = performance.now();
+//     while (performance.now() - t0 < 4000) {
+//         let buf = new Float32Array(analyser.fftSize);
+//         analyser.getFloatTimeDomainData(buf);
+
+//         let s = 0;
+//         for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+//         samples.push(Math.sqrt(s / buf.length));
+//         await new Promise(r => setTimeout(r, 140));
+//     }
+//     let avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+
+//     // Apply multiplier (larger -> less sensitive)
+//     voiceThreshold = Math.max(0.01, avg * calibrationMultiplier);
+//     logEvent(`Calibration done. voiceThreshold ≈ ${voiceThreshold.toFixed(4)} (multiplier ${calibrationMultiplier})`);
+
+//     sending = true;
+//     monitorVoice();
+//     scheduleSend();
+//     statusText.innerText = "Status: Active";
+// }
+
+// /* ---------- Questions ---------- */
+// async function loadQuestions() {
+//     try {
+//         let res = await fetch("/questions.json");
+//         let data = await res.json();
+//         renderQuestions(data);
+//     } catch (e) {
+//         questionPanel.innerHTML = "<p>Unable to load questions.</p>";
+//     }
+// }
+
+// function renderQuestions(qs) {
+//     questionPanel.innerHTML = "";
+//     qs.forEach((q, i) => {
+//         let div = document.createElement("div");
+//         div.className = "question-item";
+//         div.innerHTML = `<div><b>${i + 1}. ${q.question}</b></div>`;
+//         q.options.forEach((opt, j) => {
+//             div.innerHTML += `
+//                 <label class="option">
+//                     <input type="radio" name="q${i}" value="${j}">
+//                     ${opt}
+//                 </label>
+//             `;
+//         });
+//         questionPanel.appendChild(div);
+//     });
+// }
+
+// /* ---------- Voice monitoring (debounced) ---------- */
+// function monitorVoice() {
+//     if (!analyser || !sending) return;
+
+//     let buffer = new Float32Array(analyser.fftSize);
+//     analyser.getFloatTimeDomainData(buffer);
+
+//     let s = 0;
+//     for (let i = 0; i < buffer.length; i++) s += buffer[i] * buffer[i];
+//     rms = Math.sqrt(s / buffer.length);
+
+//     const now = Date.now();
+
+//     if (rms > voiceThreshold) {
+//         if (!voiceActive) {
+//             voiceActive = true;
+//             voiceStartTs = now;
+//         } else {
+//             // sustained voice?
+//             if ((now - voiceStartTs) >= VOICE_HOLD_MS) {
+//                 // show voice violation only if cooldown passed
+//                 const vtext = "Please remain silent";
+//                 if (!lastShownTime[vtext] || (now - lastShownTime[vtext] >= VIOLATION_COOLDOWN_MS)) {
+//                     pushWarning(vtext);
+//                     logEvent(vtext);
+//                     lastShownTime[vtext] = now;
+//                 }
+//             }
+//         }
+//     } else {
+//         voiceActive = false;
+//     }
+
+//     setTimeout(monitorVoice, 200);
+// }
+
+// /* ---------- Send frames periodically ---------- */
+// function scheduleSend() {
+//     if (!sending) return;
+//     sendTimer = setTimeout(async () => {
+//         await sendFrame();
+//         scheduleSend();
+//     }, 1000);
+// }
+
+// async function sendFrame() {
+//     // guard
+//     if (!video || video.readyState < 2) return;
+
+//     canvas.width = video.videoWidth;
+//     canvas.height = video.videoHeight;
+//     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+//     const data = canvas.toDataURL("image/jpeg", 0.5);
+
+//     try {
+//         const res = await fetch("/analyze_frame", {
+//             method: "POST",
+//             headers: { "Content-Type": "application/json" },
+//             body: JSON.stringify({ image: data })
+//         });
+//         const json = await res.json();
+//         processDetection(json);
+//     } catch (e) {
+//         console.warn("sendFrame error", e);
+//     }
+// }
+
+// /* ---------- Process detection results with head hold logic ---------- */
+// let lastHeadDetected = "Center";
+// let headDetectedStart = 0;
+// let phoneViolationCount = 0;
+
+// function processDetection(res) {
+//     const faces = res.faces || [];
+//     if (faceCountSpan) {
+//         faceCountSpan.innerText = "Faces: " + faces.length;
+//     }
+
+//     const now = Date.now();
+
+//     if (faces.length === 0) {
+//         reportViolation("Person not present");
+//     } else if (faces.length > 1) {
+//         reportViolation("Multiple persons detected");
+//     }
+
+//     let detected = "Center";
+//     if (res.head_pose && res.head_pose.direction) detected = res.head_pose.direction;
+
+//     if (detected !== lastHeadDetected) {
+//         lastHeadDetected = detected;
+//         headDetectedStart = now;
+//     } else if (detected === "Left" || detected === "Right") {
+//         const held = now - headDetectedStart;
+//         if (held >= HEAD_HOLD_MS) {
+//             reportViolation(detected === "Left" ? "Looking left" : "Looking right");
+//         }
+//     }
+
+//     if (res.suspected_phone) {
+//         phoneViolationCount += 1;
+//         reportViolation("Possible phone detected. Remove external devices.");
+//         if (phoneViolationCount >= 3) {
+//             alert("Repeated phone/external device detection. Test will be submitted.");
+//             submitExam(true);
+//         }
+//     }
+
+//     const ov = overlay.getContext("2d");
+//     ov.clearRect(0, 0, overlay.width, overlay.height);
+//     overlay.width = canvas.width;
+//     overlay.height = canvas.height;
+
+//     let showBoxes = false;
+//     if (faces.length === 0 || faces.length > 1) showBoxes = true;
+//     if ((lastHeadDetected === "Left" || lastHeadDetected === "Right") && (Date.now() - headDetectedStart >= HEAD_HOLD_MS)) showBoxes = true;
+
+//     if (showBoxes && faces.length > 0) {
+//         ov.strokeStyle = "red";
+//         ov.lineWidth = 3;
+//         faces.forEach(f => ov.strokeRect(f.x, f.y, f.w, f.h));
+//     }
+// }
+
+// function reportViolation(message) {
+//     const text = friendly(message);
+//     const now = Date.now();
+//     if (!lastShownTime[text] || now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS) {
+//         pushWarning(text);
+//         logEvent(text);
+//         lastShownTime[text] = now;
+//     }
+// }
 
 
 // ==============================
@@ -70,6 +386,11 @@ let headDetectedStart = 0;
 let voiceStartTs = 0;
 let voiceWarningCount = 0;
 let answeredQuestionIds = new Set();
+// add near top with other trackers
+let noFaceStart = 0;
+let multipleFaceStart = 0;
+const FACE_HOLD_MS = 2000; // require face/no-face or multiple present for 1s
+
 
 
 // ---------------- Window-change / fullscreen enforcement ----------------
@@ -774,27 +1095,40 @@ function processDetection(res) {
 
     const now = Date.now();
 
-    // --- PERSON NOT PRESENT ---
+    // --- PERSON NOT PRESENT (timed) ---
     if (faces.length === 0) {
-        const text = "Person not present";
-        if (!lastShownTime[text] || now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS) {
-            pushWarning(text);
-            logEvent(text);
-            lastShownTime[text] = now;
+        if (noFaceStart === 0) noFaceStart = now;
+        // if persisted long enough, report once (with cooldown)
+        if (now - noFaceStart >= FACE_HOLD_MS) {
+            const text = "Person not present";
+            if (!lastShownTime[text] || now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS) {
+                pushWarning(text);
+                logEvent(text);
+                lastShownTime[text] = now;
+            }
         }
+    } else {
+        // reset no-face timer when person returns
+        noFaceStart = 0;
     }
 
-    // --- MULTIPLE PERSONS ---
-    else if (faces.length > 1) {
-        const text = "Multiple persons detected";
-        if (!lastShownTime[text] || now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS) {
-            pushWarning(text);
-            logEvent(text);
-            lastShownTime[text] = now;
+    // --- MULTIPLE PERSONS (timed) ---
+    if (faces.length > 1) {
+        if (multipleFaceStart === 0) multipleFaceStart = now;
+        if (now - multipleFaceStart >= FACE_HOLD_MS) {
+            const text = "Multiple persons detected";
+            if (!lastShownTime[text] || now - lastShownTime[text] >= VIOLATION_COOLDOWN_MS) {
+                pushWarning(text);
+                logEvent(text);
+                lastShownTime[text] = now;
+            }
         }
+    } else {
+        // reset multiple persons timer when only single/zero faces present
+        multipleFaceStart = 0;
     }
 
-    // --- HEAD DIRECTION ---
+    // --- HEAD DIRECTION (existing hold logic) ---
     let detected = "Center";
     if (res.head_pose && res.head_pose.direction)
         detected = res.head_pose.direction;
@@ -812,6 +1146,9 @@ function processDetection(res) {
                     lastShownTime[text] = now;
                 }
             }
+        } else {
+            // optional: reset lastHeadDetected timers when back to center
+            // (no action needed, headDetectedStart will update on next change)
         }
     }
 
@@ -832,6 +1169,7 @@ function processDetection(res) {
         faces.forEach(f => ov.strokeRect(f.x, f.y, f.w, f.h));
     }
 }
+
 
 // Log panel toggle functionality
 const logToggle = document.getElementById('logToggle');
